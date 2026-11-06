@@ -34,7 +34,9 @@
 
 - 2026-11-02 — Etapa 1.1: perguntas de desenho levantadas (A1–A5 simulador, B1–B6 bronze) e respondidas no documento de desenho técnico, com contexto de negócio, escopo, justificativas, alternativas, riscos e critérios de aceite. Estudo da documentação oficial (Auto Loader, schema, `_metadata`, triggers, checkpoints, limites do serverless).
 - 2026-11-06 — Desenho e diário de progresso publicados no PR #3 (`fase-1/desenho`).
-- **Próximo passo:** etapa 1.2, começando pela inclusão do volume `olist.ops.checkpoints` e das tabelas `ops.simulator_runs`/`ops.simulator_chaos_log` no notebook de setup.
+- 2026-11-06 — PR #3 mergeado (como merge commit, não squash: o commit `dbdf3cd`, com URL do workspace e e-mail, ficou no histórico da `main`; decidido não reescrever o histórico por ser dado de baixa sensibilidade). Branches antigas apagadas.
+- 2026-11-06 — Etapa 1.2a especificada: volume `ops.checkpoints`, tabelas `ops.simulator_runs` (com CHECK constraint em `status`) e `ops.simulator_chaos_log`, com COMMENT em tabelas e colunas; branch `fase-1/estrutura-controle`. Colunas do `chaos_log` padronizadas em inglês no desenho (A5).
+- **Próximo passo:** João implementa a 1.2a no notebook de setup → PR → review. Depois, 1.2b (notebook do simulador, sem caos).
 
 ## Decisões
 
