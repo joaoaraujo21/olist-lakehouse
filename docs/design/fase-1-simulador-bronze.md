@@ -277,7 +277,7 @@ Todas as taxas e datas ficam centralizadas em uma configuração única (`CHAOS_
 - Decisões por arquivo ou por dia usam um gerador com semente derivada da data simulada: `random.Random(f"{SEED_GLOBAL}-{sim_date}")`.
 - Decisões por registro usam o hash da chave do registro (por exemplo, `hash(order_id + "late") % 100 < 3`). Assim, o mesmo registro recebe sempre o mesmo tratamento, independentemente da ordem de processamento.
 
-Cada falha injetada é registrada na tabela `olist.ops.simulator_chaos_log` (`sim_date`, `tipo`, `entidade`, `chave`, `detalhe`), que funciona como **gabarito**. Na Fase 2, os testes da silver comparam o resultado da deduplicação com esse gabarito, comprovando que exatamente as duplicatas injetadas foram removidas.
+Cada falha injetada é registrada na tabela `olist.ops.simulator_chaos_log` (`run_id`, `sim_date`, `chaos_type`, `entity`, `record_key`, `detail`, `logged_at`), que funciona como **gabarito**. Na Fase 2, os testes da silver comparam o resultado da deduplicação com esse gabarito, comprovando que exatamente as duplicatas injetadas foram removidas.
 
 Justificativa: falhas puramente aleatórias tornariam cada geração de um mesmo dia diferente da anterior, o que quebra a idempotência (A3) e impede a reprodução de defeitos encontrados nas camadas seguintes.
 
