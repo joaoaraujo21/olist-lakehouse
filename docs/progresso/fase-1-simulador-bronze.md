@@ -2,7 +2,7 @@
 
 - **Período previsto:** semanas 2–3
 - **Status:** 🔄 em andamento — etapa 1.1 (desenho)
-- **Branch/PRs:** `fase-1/desenho` (a criar)
+- **Branch/PRs:** `fase-1/desenho` — PR #3 (desenho técnico + diário de progresso)
 
 ## Objetivo
 
@@ -18,13 +18,13 @@
 - Rodar o gerador 3 vezes e provar que não há duplicidade indevida na bronze.
 - Quebrar o schema de propósito e o pipeline sobreviver.
 
-**Fluxo combinado:** Claude apresenta o desafio e os requisitos → João desenha a solução antes de codar → implementação na interface → code review → ADR da principal decisão → PR em branch `fase-1/...`.
+**Fluxo da fase:** contexto de negócio e requisitos → desenho técnico aprovado antes de codar → implementação na interface → code review → ADR da principal decisão → PR em branch `fase-1/...`.
 
 ## Etapas
 
 | Etapa | Entrega | Status |
 |---|---|---|
-| 1.1 Desenho | `docs/design/fase-1-simulador-bronze.md` | rascunho pronto (Claude, a pedido do João); falta revisar e commitar |
+| 1.1 Desenho | `docs/design/fase-1-simulador-bronze.md` | ✅ concluída — PR #3 |
 | 1.2 Simulador base | lotes "limpos" em `raw_data/<entidade>/` + `ops.simulator_runs` | — |
 | 1.3 Bronze | Auto Loader por entidade + auditoria | — |
 | 1.4 Caos + CDC | duplicatas, atraso, fora de ordem, schema, CDC | — |
@@ -32,9 +32,9 @@
 
 ## O que foi feito
 
-- 2026-11-02 — Desafio da etapa 1.1 apresentado (perguntas A1–A5 e B1–B6). O João pediu as sugestões de melhor prática; o documento de desenho foi escrito com pergunta, resposta, porquê e alternativas.
-- 2026-11-02 — Documento reescrito no formato "Pergunta / Resposta" (uma pergunta por subitem), em tom de documento técnico formal (responsável técnico: João), com contexto de negócio, escopo, riscos e critérios de aceite. João vai ler o documento e a documentação oficial antes de seguir.
-- **Próximo passo ao retomar:** apagar a branch `fase-0/setup` → criar `fase-1/desenho` → commitar `docs/design/fase-1-simulador-bronze.md` (+ `progresso/`) → PR para revisão → depois, etapa 1.2 começando pela inclusão do volume `olist.ops.checkpoints` e das tabelas `ops.simulator_runs`/`ops.simulator_chaos_log` no setup.
+- 2026-11-02 — Etapa 1.1: perguntas de desenho levantadas (A1–A5 simulador, B1–B6 bronze) e respondidas no documento de desenho técnico, com contexto de negócio, escopo, justificativas, alternativas, riscos e critérios de aceite. Estudo da documentação oficial (Auto Loader, schema, `_metadata`, triggers, checkpoints, limites do serverless).
+- 2026-11-06 — Desenho e diário de progresso publicados no PR #3 (`fase-1/desenho`).
+- **Próximo passo:** etapa 1.2, começando pela inclusão do volume `olist.ops.checkpoints` e das tabelas `ops.simulator_runs`/`ops.simulator_chaos_log` no notebook de setup.
 
 ## Decisões
 

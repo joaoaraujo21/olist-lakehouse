@@ -25,18 +25,16 @@ Ao concluir uma fase: marcar ✅ aqui, fechar o arquivo da fase (seção "Encerr
 
 | O quê | Onde |
 |---|---|
-| Workspace Databricks (Free Edition) | `https://dbc-320fbd50-0c3f.cloud.databricks.com` — usuário `joaogui21@hotmail.com` |
-| Repositório GitHub (público) | https://github.com/joaoaraujo21/olist-lakehouse |
-| Git folder no Databricks | clone do repositório acima no Workspace do usuário (o trabalho é feito pela interface) |
-| Pasta local | `D:\Projeto Databricks - Olist` — planejamento (`.docx`), rascunhos de código/docs, `progresso/` e `CLAUDE.md` |
-| CLI local | Databricks CLI v1.14.0, perfil `joaogui21@hotmail.com` (login OAuth; se expirar: `databricks auth login --host <url> --profile joaogui21@hotmail.com`). `gh` não está instalado; o GitHub é lido pela API pública (`curl`) |
+| Ambiente | Databricks Free Edition (compute serverless) |
+| Repositório GitHub | https://github.com/joaoaraujo21/olist-lakehouse |
+| Git folder no Databricks | clone do repositório no Workspace; o desenvolvimento é feito pela interface do Databricks |
+| Documentação | `docs/adr/` (decisões), `docs/design/` (desenhos técnicos por fase), `docs/dicionario_metricas.md`, `docs/progresso/` (este diário) |
 
-## Como trabalhamos (combinado)
+## Forma de trabalho
 
-- Tudo em **português**.
-- João implementa pela **interface do Databricks** e prefere **digitar o código ele mesmo**; Claude apresenta o desafio, dá dicas e referências, faz **code review como tech lead** (workspace pela CLI, GitHub pela API) e ajuda nos ADRs. Código/documento completo só quando pedido.
-- Sem pedido explícito para executar, Claude só **lê/analisa** o workspace.
-- Explicações passo a passo para operações na interface (Databricks e GitHub).
+- Cada fase começa pelo **contexto de negócio e pelo desenho técnico**, aprovado antes da implementação.
+- Implementação pela interface do Databricks, com **code review** de cada entrega antes do merge.
+- Toda decisão relevante é registrada em um **ADR** curto.
 - **Git:** GitHub Flow — `main` + uma branch por fase/feature, PR revisado antes do merge, **Squash and merge**, apagar a branch após o merge, Conventional Commits (`feat:`, `fix:`, `docs:`...).
 
 ## Decisões em aberto (projeto)
