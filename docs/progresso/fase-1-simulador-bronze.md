@@ -57,7 +57,11 @@ Ver o resumo no fim de `docs/design/fase-1-simulador-bronze.md`. Principais: dat
 
 ## Problemas encontrados e como foram resolvidos
 
-_(preencher durante a fase)_
+| Problema | Causa | Solução |
+|---|---|---|
+| Notebook de uma parte isolada falhou com `NameError` | parte importada como notebook separado; as variáveis vêm das partes anteriores | notebook único `01_simulador_base`, com as partes em sequência |
+| Primeiro teste de MD5 deu "OK" sem testar nada | o reprocessamento não havia rodado; foram comparados os mesmos arquivos | conferir a evidência (nova linha em `simulator_runs`, data de modificação do arquivo) antes de aceitar o resultado |
+| PR do simulador base com conflito em `docs/progresso/fase-1-simulador-bronze.md` | a branch `fase-1/simulador-base` foi criada a partir da branch antiga `fase-1/estrutura-controle`, e não da `main` atualizada; com squash merge, os commits originais do PR #4 não fazem parte do histórico da `main` | conflito resolvido no GitHub mantendo a versão da branch; regra: antes de criar uma branch, mudar para a `main` e fazer Pull |
 
 ## Aprendizados
 
