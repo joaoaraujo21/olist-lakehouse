@@ -62,8 +62,8 @@ docs/dicionario_metricas.md                        dicionário v0 dos 8 KPIs
 
 ## Encerramento — pendências herdadas para a Fase 1
 
-- [ ] Apagar a branch `fase-0/setup` no GitHub.
+- [x] Apagar a branch `fase-0/setup` no GitHub.
 - [ ] Configurar proteção da `main` (Settings → Branches: exigir PR antes do merge).
-- [ ] Confirmar que o notebook antigo `Projeto Olist/Estrutura Olist & Landing Zone` (fora do Git folder) foi apagado.
-- [ ] No Databricks: Git folder → `main` → **Pull**.
-- [ ] Opcionais no notebook de setup (no próximo PR que mexer nele): crases em `` `kagglehub==1.0.3` ``, linha em branco no topo da célula de validação, títulos nas células.
+- [x] Confirmar que o notebook antigo `Projeto Olist/Estrutura Olist & Landing Zone` (fora do Git folder) foi apagado.
+- [x] No Databricks: Git folder → `main` → **Pull**.
+- [x] Opcionais no notebook de setup: crases em `` `kagglehub==1.0.3` `` e linha em branco removida (PR #4). Títulos nas células descartados.
