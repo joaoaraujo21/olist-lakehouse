@@ -1,8 +1,8 @@
 # Fase 1 — Simulador e Bronze
 
 - **Período previsto:** semanas 2–3
-- **Status:** 🔄 em andamento — etapa 1.2b concluída; próxima: 1.3 (bronze)
-- **Branch/PRs:** `fase-1/desenho` (PR #3), `fase-1/estrutura-controle` (PR #4), `fase-1/simulador-base` (PR do simulador base)
+- **Status:** 🔄 em andamento — etapa 1.3 concluída; próxima: 1.4 (caos + CDC)
+- **Branch/PRs:** `fase-1/desenho` (PR #3), `fase-1/estrutura-controle` (PR #4), `fase-1/simulador-base` (PR #5), `fase-1/bronze` (PR #6)
 
 ## Objetivo
 
@@ -26,8 +26,8 @@
 |---|---|---|
 | 1.1 Desenho | `docs/design/fase-1-simulador-bronze.md` | ✅ concluída — PR #3 |
 | 1.2a Estrutura de controle | volume `ops.checkpoints`, `ops.simulator_runs`, `ops.simulator_chaos_log` | ✅ concluída — PR #4 |
-| 1.2b Simulador base | notebook `src/simulador/01_simulador_base`: lotes "limpos" em `raw_data/<entidade>/` | ✅ concluída — PR do simulador base |
-| 1.3 Bronze | Auto Loader por entidade + auditoria | — |
+| 1.2b Simulador base | notebook `src/simulador/01_simulador_base`: lotes "limpos" em `raw_data/<entidade>/` | ✅ concluída — PR #5 |
+| 1.3 Bronze | Auto Loader por entidade + auditoria | ✅ concluída — PR #6 |
 | 1.4 Caos + CDC | duplicatas, atraso, fora de ordem, schema, CDC | — |
 | 1.5 Aceite | 3× sem duplicar; schema quebrado e stream sobrevive; ADRs | — |
 
@@ -49,7 +49,13 @@
 - 2026-11-07 — Parte 5 validada no volume: um arquivo por entidade em `sim_date=2026-09-06/` com nome determinístico, preparação vazia, strings preservadas (CEP com zero à esquerda). O primeiro dia tem 1 pedido; `geolocation` (carga inicial) gera o maior arquivo, com cerca de 176 MB.
 - 2026-11-07 — Parte 6 especificada: execução em `try/except/finally` — `SUCCESS` com arquivos e linhas, `FAILED` com a mensagem de erro e relançamento da exceção, limpeza da preparação sempre. A célula de execução da Parte 5 passou para a Parte 6. Roteiro de aceite com verificação de MD5 em notebook auxiliar fora do repositório.
 - 2026-11-07 — Aceite da 1.2b: 1ª execução gerou 2026-09-06 com `SUCCESS` (9 arquivos, 1.036.286 linhas, quase todas da carga inicial: 1.000.163 de `geolocation`); 2ª execução avançou sozinha para 2026-09-07 (5 arquivos, 5 linhas — entidades de carga inicial não lidas); preparação vazia. 3ª execução com `sim_date_override = 2026-09-06` regravou os 9 arquivos do dia com MD5 idêntico ao original, e o progresso permaneceu em 2026-09-07 (critério nº 3). Lição registrada: a primeira tentativa do teste de MD5 comparou arquivos que não tinham sido regravados (o reprocessamento não chegou a rodar) — a evidência do teste (nova linha em `simulator_runs` e data de modificação do arquivo) precisa ser conferida, não só o resultado "OK".
-- **Próximo passo:** limpar outputs → commit + PR da branch `fase-1/simulador-base` (com os arquivos de `docs/progresso/` atualizados) → review → etapa 1.3 (bronze).
+- 2026-11-07 — PR #5 revisado e mergeado com squash (`cf7b7dc`), após resolução de conflito em `docs/progresso/fase-1-simulador-bronze.md` (ver "Problemas encontrados"). Branch apagada; Git folder do Databricks na `main` atualizada.
+- 2026-11-07 — Etapa 1.3 especificada, branch `fase-1/bronze` criada a partir da `main` atualizada: notebook `src/bronze/01_bronze_ingestao` em 4 partes (configuração; leitura com Auto Loader e colunas de auditoria; função `ingest_entity` com `availableNow` e nova tentativa em mudança de schema; execução das 10 entidades, documentação das tabelas e validação). `sim_date` declarada em `cloudFiles.partitionColumns`, porque o simulador grava com `partitionBy` e o valor existe só no nome da pasta. `cloudFiles.allowOverwrites` mantido no padrão (`false`): um dia regravado pelo simulador com o mesmo nome não é lido de novo.
+- 2026-11-07 — Etapa 1.3, Parte 1 (configuração: widget `run_id`, constantes e funções de caminho por entidade) implementada e conferida no Databricks. Notebooks de referência passam a ter, em cada célula de código, um comentário explicando a célula e as funções usadas; o simulador recebeu esses comentários sem alteração de código. Parte 2 (leitura com Auto Loader e colunas de auditoria) especificada.
+- 2026-11-07 — Etapa 1.3, Parte 2 validada: stream de `orders` com as colunas de negócio e `sim_date` como `string`, `_rescued_data` presente e as 4 colunas de auditoria; a definição do stream gravou a primeira versão do schema em `checkpoints/bronze/orders/_schema/`, sem criar tabela. Parte 3 especificada: `ingest_entity` com escrita Delta append-only, `availableNow`, `mergeSchema` para aceitar colunas novas e uma nova tentativa apenas em `UnknownFieldException`; linhas gravadas medidas na tabela pelo `_run_id`. Teste com `category_translation`.
+- 2026-11-07 — Etapa 1.3, Parte 3 validada: tabela `olist.bronze.category_translation` criada (gerenciada) com 71 linhas, um único arquivo de origem, `sim_date` 2026-09-06, `_rescued_data` vazio e um micro-batch registrado no checkpoint (`offsets`, `commits`, `sources`). Parte 4 especificada: execução das 10 entidades sem interromper as demais em caso de falha (erro consolidado no final); comentários da tabela e das colunas técnicas aplicados só quando diferentes, para não gerar versões desnecessárias; colunas de negócio documentadas na silver, junto com o contrato de tipos; validação das contagens contra os arquivos da landing e reexecução com 0 linhas.
+- 2026-11-07 — Primeira execução completa da bronze: 9 entidades ingeridas e documentadas (1.036.220 linhas nesta execução, mais as 71 de `category_translation` da Parte 3); `order_reviews` falhou com `CF_EMPTY_DIR_FOR_SCHEMA_INFERENCE`, sem afetar as demais, e a célula terminou com erro, como previsto. Causa: a avaliação é emitida no dia da resposta do cliente, posterior à entrega, então ainda não há nenhum arquivo dessa entidade. Correção: `has_source_files`, que ignora a entidade até o primeiro arquivo chegar (ver "Problemas encontrados").
+- 2026-11-07 — Aceite da 1.3: nova execução após a correção gravou 0 linhas nas 9 entidades e 0 comentários (nada duplicado nem reaplicado); `order_reviews` ignorada sem erro. Contagens da bronze iguais às da landing em todas as entidades e dias, total de 1.036.291 linhas; cada arquivo gravado por uma única execução; nenhum registro com `_rescued_data`. Reexecução com `run_id` novo: 0 linhas em todas as entidades. Tabelas e colunas técnicas comentadas; o histórico Delta de `orders` não ganhou versões nas reexecuções (stream sem dados não gera commit e comentários iguais não são reaplicados).
 
 ## Decisões
 
@@ -61,6 +67,7 @@ Ver o resumo no fim de `docs/design/fase-1-simulador-bronze.md`. Principais: dat
 |---|---|---|
 | Notebook de uma parte isolada falhou com `NameError` | parte importada como notebook separado; as variáveis vêm das partes anteriores | notebook único `01_simulador_base`, com as partes em sequência |
 | Primeiro teste de MD5 deu "OK" sem testar nada | o reprocessamento não havia rodado; foram comparados os mesmos arquivos | conferir a evidência (nova linha em `simulator_runs`, data de modificação do arquivo) antes de aceitar o resultado |
+| Ingestão de `order_reviews` falhou com `CF_EMPTY_DIR_FOR_SCHEMA_INFERENCE` | a entidade ainda não tem nenhum arquivo na landing (avaliações são emitidas dias depois da entrega); sem arquivo, o Auto Loader não consegue inferir o schema | entidade ignorada enquanto não houver pasta `sim_date=`; quando o primeiro arquivo chegar, o stream começa e lê todos os existentes. Alternativa descartada: declarar o schema na bronze (contraria a decisão B4) |
 | PR do simulador base com conflito em `docs/progresso/fase-1-simulador-bronze.md` | a branch `fase-1/simulador-base` foi criada a partir da branch antiga `fase-1/estrutura-controle`, e não da `main` atualizada; com squash merge, os commits originais do PR #4 não fazem parte do histórico da `main` | conflito resolvido no GitHub mantendo a versão da branch; regra: antes de criar uma branch, mudar para a `main` e fazer Pull |
 
 ## Aprendizados
