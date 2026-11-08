@@ -333,7 +333,7 @@ Justificativa: endereço é o atributo que efetivamente muda no cadastro de clie
 
 **Resposta:** Os dias 2026-09-06 e 2026-09-07 foram gerados e ingeridos sem falhas. Regerá-los com as falhas ativas produziria arquivos diferentes com o mesmo nome, que o Auto Loader não processaria novamente (`allowOverwrites = false`), deixando a landing e a bronze divergentes. Por isso, a simulação será **reiniciada** desde o primeiro dia, com as falhas ativas.
 
-O reinício é feito pelo notebook `setup/99_reset_simulacao`, que apaga, nesta ordem: tabelas bronze das entidades, checkpoints da bronze, arquivos da landing (`raw_data`) e registros de `ops.simulator_runs` e `ops.simulator_chaos_log`. A estrutura (schemas, volumes e tabelas de controle) é mantida. O notebook exibe o que será apagado e só executa a exclusão com a confirmação explícita no parâmetro `confirmacao`.
+O reinício é feito pelo notebook `setup/99_reset_simulacao`, que apaga, nesta ordem: tabelas bronze das entidades, checkpoints da bronze, arquivos da landing (`raw_data`) e registros de `ops.simulator_runs` e `ops.simulator_chaos_log`. A estrutura (schemas, volumes e tabelas de controle) é mantida. O notebook exibe o que será apagado e só executa a exclusão com a confirmação explícita no parâmetro `confirmacao`, que inclui a data do dia (`APAGAR AAAA-MM-DD`): como o valor do parâmetro fica salvo no notebook, uma confirmação esquecida deixa de valer no dia seguinte.
 
 Justificativa:
 - Aplica a regra operacional de B3: o reprocessamento completo é uma operação intencional, que apaga checkpoint e tabela na mesma operação. Apagar somente parte do estado causaria perda ou duplicidade de dados.
