@@ -7,6 +7,7 @@
 | **Responsável técnico** | João Guilherme Araujo |
 | **Data** | 2026-11-02 |
 | **Status** | Em revisão |
+| **Revisões** | 2026-11-07 — abertura da etapa 1.4: A5 detalhado; incluídos A6 (feed de mudanças cadastrais) e A7 (reinício controlado da simulação); 2026-11-08 — A5: função de hash do sorteio, gravação do gabarito e resultado observado da linha de JSON inválido |
 | **Documentos relacionados** | [ADR 0001 — Organização da landing](../adr/0001-organizacao-landing.md) · [ADR 0002 — Pedido válido e entrega no prazo](../adr/0002-pedido-valido-e-entrega-no-prazo.md) · [Dicionário de métricas v0](../dicionario_metricas.md) |
 
 ---
@@ -263,7 +264,7 @@ Justificativa:
 | Fora de ordem | decorrência do atraso nos eventos de status (o `delivered` chega antes do `shipped`), mais o embaralhamento das linhas nos arquivos de eventos | — | silver — ordenação por `event_sequence` |
 | Coluna nova | a partir de uma data configurada, `order_payments` passa a conter `payment_gateway` | uma data fixa | bronze — evolução de schema |
 | Valor fora do padrão | alguns valores de `price` emitidos com vírgula decimal (`"12,90"`) | uma data fixa, poucos registros | silver — tipagem e quarentena |
-| Arquivo corrompido | uma linha de JSON inválido em um arquivo | uma data fixa, um arquivo | bronze — dados resgatados |
+| Arquivo corrompido | uma linha de JSON inválido em um arquivo | uma data fixa, um arquivo | bronze — registro preservado com as colunas nulas (resultado observado na etapa 1.4; tratamento definido na etapa 1.5) |
 
 Os reenvios usam, de propósito, um **nome diferente** do arquivo original: representam a origem enviando o mesmo dado duas vezes, que é uma **duplicidade de negócio** e deve ser preservada na bronze (B6). A duplicidade técnica, causada pela reexecução do nosso próprio processo, é impedida pelas garantias de A3.
 
@@ -275,11 +276,71 @@ Todas as taxas e datas ficam centralizadas em uma configuração única (`CHAOS_
 
 **Resposta:** Por meio de **aleatoriedade determinística**:
 - Decisões por arquivo ou por dia usam um gerador com semente derivada da data simulada: `random.Random(f"{SEED_GLOBAL}-{sim_date}")`.
-- Decisões por registro usam o hash da chave do registro (por exemplo, `hash(order_id + "late") % 100 < 3`). Assim, o mesmo registro recebe sempre o mesmo tratamento, independentemente da ordem de processamento.
+- Decisões por registro usam o hash da chave do registro combinado com a semente e com o tipo de falha (por exemplo, `pmod(xxhash64(semente, "late_arrival", order_id, order_item_id), 100) < 3`). Assim, o mesmo registro recebe sempre o mesmo tratamento, independentemente da ordem de processamento, e as falhas são independentes entre si. A função `hash()` do Python não é utilizada: para textos, seu resultado muda a cada processo.
 
-Cada falha injetada é registrada na tabela `olist.ops.simulator_chaos_log` (`run_id`, `sim_date`, `chaos_type`, `entity`, `record_key`, `detail`, `logged_at`), que funciona como **gabarito**. Na Fase 2, os testes da silver comparam o resultado da deduplicação com esse gabarito, comprovando que exatamente as duplicatas injetadas foram removidas.
+Cada falha injetada é registrada na tabela `olist.ops.simulator_chaos_log` (`run_id`, `sim_date`, `chaos_type`, `entity`, `record_key`, `detail`, `logged_at`), que funciona como **gabarito**. A gravação substitui os dias reprocessados em uma única transação (`replaceWhere` por intervalo de `sim_date`). Na Fase 2, os testes da silver comparam o resultado da deduplicação com esse gabarito, comprovando que exatamente as duplicatas injetadas foram removidas.
 
 Justificativa: falhas puramente aleatórias tornariam cada geração de um mesmo dia diferente da anterior, o que quebra a idempotência (A3) e impede a reprodução de defeitos encontrados nas camadas seguintes.
+
+---
+
+**Pergunta:** Em quais entidades e em quais datas cada falha será aplicada?
+
+**Resposta:** Definido na abertura da etapa 1.4, a partir da distribuição dos pedidos simulados. Os dias de 2026-09-06 a 2026-10-04 têm somente 5 pedidos; o primeiro volume real ocorre de **2026-10-05 a 2026-10-12** (322 pedidos), e a primeira avaliação respondida é de 2026-10-09. As falhas de data fixa ficam nesse intervalo, em dias diferentes, para que o efeito de cada uma possa ser observado isoladamente:
+
+| Falha | Entidades | Data ou regra |
+|---|---|---|
+| Reenvio de arquivo | todas as entidades diárias | 5% dos arquivos (sorteio por entidade e dia) |
+| Registro duplicado | entidades transacionais e feeds CDC; exceto cargas estáticas | 1% dos registros |
+| Chegada atrasada | `order_status_events` e `order_items` | 3% dos registros, atraso de 1 a 3 dias; registros que ultrapassariam o último dia da simulação não são atrasados |
+| Fora de ordem | `order_status_events` | decorrência do atraso; linhas dos arquivos de eventos ordenadas por hash da chave (ordem embaralhada, porém idêntica a cada geração) |
+| Coluna nova `payment_gateway` | `order_payments` | a partir de **2026-10-08** |
+| `price` com vírgula decimal | `order_items` | **2026-10-07**, poucos registros |
+| Linha de JSON inválido | `order_items` | **2026-10-10**, um arquivo |
+
+Regras complementares:
+- **O cabeçalho do pedido (`orders`) nunca atrasa.** Itens e eventos podem chegar depois do pedido, mas nunca antes. A silver da Fase 2 trata atraso e fora de ordem sem precisar tratar registros órfãos, tema reservado à Fase 5.
+- **Os feeds CDC não atrasam.** A ordem das mudanças é garantida por `change_sequence` (A6); atrasá-los misturaria dois testes na Fase 3.
+- **A duplicação não se aplica às cargas estáticas.** `geolocation` já contém linhas repetidas na origem, e misturar duplicatas naturais e injetadas inviabilizaria o gabarito.
+- A linha inválida não fica no arquivo de `order_reviews` de 2026-10-09, que é o primeiro dessa entidade e é usado na inferência de schema.
+- O gabarito de um dia é substituído quando o dia é reprocessado, como acontece com os arquivos da landing, de modo que o gabarito sempre corresponde ao conteúdo atual da landing.
+
+#### A6. Feed de mudanças cadastrais (CDC)
+
+**Pergunta:** Quais mudanças cadastrais o simulador emite, com que frequência e em que formato?
+
+**Resposta:** O dataset não contém histórico cadastral; as mudanças são **sintéticas** e determinísticas. Cada cliente ou vendedor tem, desde o início, a definição de se e quando vai mudar, calculada por hash da sua chave, como nas falhas de A5:
+
+| Feed | Operação | Abrangência | Momento (dia simulado) |
+|---|---|---|---|
+| `customers` | `UPDATE` — mudança de endereço | 3% dos clientes | inclusão + 7 a 120 dias |
+| `customers` | `DELETE` — solicitação de exclusão (LGPD) | 0,5% dos clientes | última data conhecida do pedido + 30 a 365 dias |
+| `sellers` | `UPDATE` — mudança de endereço | 10% dos vendedores | qualquer dia após a carga inicial |
+| `sellers` | `DELETE` — desligamento | 2% dos vendedores | última venda + 30 a 90 dias |
+
+Regras:
+- **Atributos alterados:** somente o endereço (CEP, cidade e UF). O endereço novo é escolhido, por hash, entre endereços existentes na base da própria entidade, o que evita combinações inválidas de CEP, cidade e UF.
+- **Conteúdo do registro:** o `UPDATE` traz o estado completo após a alteração. O `DELETE` traz apenas as chaves, com os demais atributos nulos: um evento de exclusão não deve reenviar os dados pessoais cuja exclusão foi solicitada.
+- **Ordem:** `change_sequence` 1 (`INSERT`), 2 (`UPDATE`) e 3 (`DELETE`). Uma mudança nunca ocorre após a exclusão: se a data sorteada para o `UPDATE` não for anterior à do `DELETE`, o `UPDATE` não é emitido. Mudanças com data posterior ao último dia da simulação não são emitidas.
+- **Desligamento após a última venda:** nenhum pedido referencia um vendedor já excluído, o que seria uma inconsistência produzida pela simulação e não um comportamento da origem.
+- As mudanças cadastrais são dados legítimos e **não** são registradas em `ops.simulator_chaos_log`, que contém somente as falhas injetadas.
+
+Justificativa: endereço é o atributo que efetivamente muda no cadastro de clientes e vendedores e é o que afeta as análises por região, cenário que motiva o histórico SCD2 da Fase 3. As taxas representam uma operação estável e garantem mudanças de vendedores já em outubro de 2026, dentro do período gerado na Fase 1; as exclusões de clientes (cerca de 500 ao longo da simulação) são suficientes para o processo de direito ao esquecimento da Fase 6.
+
+#### A7. Reinício controlado da simulação
+
+**Pergunta:** Como tratar os dias gerados antes da ativação das falhas?
+
+**Resposta:** Os dias 2026-09-06 e 2026-09-07 foram gerados e ingeridos sem falhas. Regerá-los com as falhas ativas produziria arquivos diferentes com o mesmo nome, que o Auto Loader não processaria novamente (`allowOverwrites = false`), deixando a landing e a bronze divergentes. Por isso, a simulação será **reiniciada** desde o primeiro dia, com as falhas ativas.
+
+O reinício é feito pelo notebook `setup/99_reset_simulacao`, que apaga, nesta ordem: tabelas bronze das entidades, checkpoints da bronze, arquivos da landing (`raw_data`) e registros de `ops.simulator_runs` e `ops.simulator_chaos_log`. A estrutura (schemas, volumes e tabelas de controle) é mantida. O notebook exibe o que será apagado e só executa a exclusão com a confirmação explícita no parâmetro `confirmacao`, que inclui a data do dia (`APAGAR AAAA-MM-DD`): como o valor do parâmetro fica salvo no notebook, uma confirmação esquecida deixa de valer no dia seguinte.
+
+Justificativa:
+- Aplica a regra operacional de B3: o reprocessamento completo é uma operação intencional, que apaga checkpoint e tabela na mesma operação. Apagar somente parte do estado causaria perda ou duplicidade de dados.
+- Um procedimento destrutivo deve ser versionado, revisável e repetível, e não depender de comandos manuais.
+- O custo é mínimo enquanto a simulação tem poucos dias gerados.
+
+Alternativa avaliada: *ativar as falhas somente a partir de uma data, preservando os dias já gerados.* Descartada porque a simulação passaria a ter um período inicial sem falhas que não representa a origem, distorcendo as taxas medidas na silver.
 
 ### Bloco B — Bronze
 
@@ -408,7 +469,9 @@ A silver (Fase 2) fará a deduplicação de forma determinística: pela chave de
 | A2 | Pedidos divididos em cabeçalho (`orders`) e eventos (`order_status_events`); `customers` e `sellers` como feeds CDC; `products`, `geolocation` e `category_translation` em carga inicial |
 | A3 | JSON Lines; caminho determinístico `raw_data/<entidade>/sim_date=AAAA-MM-DD/<entidade>_AAAA-MM-DD_part-000.json`; escrita em `_staging` seguida de move |
 | A4 | Um arquivo por entidade por dia; 1 dia por execução na operação e 30 na carga histórica |
-| A5 | Falhas determinísticas (semente por data, hash por chave), configuradas em `CHAOS_CONFIG` e registradas em `ops.simulator_chaos_log` |
+| A5 | Falhas determinísticas (semente por data, hash por chave), configuradas em `CHAOS_CONFIG` e registradas em `ops.simulator_chaos_log`; datas fixas em 2026-10-07, 2026-10-08 e 2026-10-10; cabeçalho do pedido e feeds CDC nunca atrasam |
+| A6 | Mudanças cadastrais sintéticas de endereço (`UPDATE`) e exclusões (`DELETE`, só com as chaves) em `customers` e `sellers`, definidas por hash da chave |
+| A7 | Reinício controlado da simulação com as falhas ativas, pelo notebook `setup/99_reset_simulacao`, com confirmação explícita |
 | B1 | Bronze em notebook com Structured Streaming e Auto Loader, função genérica por entidade |
 | B2 | `trigger(availableNow=True)`, sempre declarado |
 | B3 | Checkpoint e schema em `/Volumes/olist/ops/checkpoints/bronze/<entidade>/` |
@@ -432,5 +495,5 @@ A silver (Fase 2) fará a deduplicação de forma determinística: pela chave de
 |---|---|---|
 | 1.2 Simulador base | geração de dias sem falhas; `ops.simulator_runs`; deslocamento de datas; divisão de pedidos em cabeçalho e eventos | regerar um mesmo dia produz arquivos idênticos |
 | 1.3 Bronze | Volume de checkpoints; função `ingest_entity`; colunas de auditoria; uma tabela por entidade | contagens da bronze conferem com os arquivos gerados |
-| 1.4 Falhas e CDC | `CHAOS_CONFIG`; `ops.simulator_chaos_log`; feeds CDC de `customers` e `sellers` | falhas registradas no gabarito e reproduzíveis |
+| 1.4 Falhas e CDC | reinício controlado (A7); `CHAOS_CONFIG`; `ops.simulator_chaos_log`; feeds CDC de `customers` e `sellers` (A6) | falhas registradas no gabarito e reproduzíveis; mudanças cadastrais coerentes (nenhuma após a exclusão) |
 | 1.5 Aceite | testes de idempotência e de evolução de schema; ADRs da fase | três execuções sem duplicidade técnica; stream íntegro após inclusão de coluna nova |
