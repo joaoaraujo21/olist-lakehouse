@@ -7,7 +7,7 @@
 | **Responsável técnico** | João Guilherme Araujo |
 | **Data** | 2026-11-02 |
 | **Status** | Em revisão |
-| **Revisões** | 2026-11-07 — abertura da etapa 1.4: A5 detalhado; incluídos A6 (feed de mudanças cadastrais) e A7 (reinício controlado da simulação); 2026-11-08 — A5: função de hash do sorteio, gravação do gabarito e resultado observado da linha de JSON inválido |
+| **Revisões** | 2026-11-07 — abertura da etapa 1.4: A5 detalhado; incluídos A6 (feed de mudanças cadastrais) e A7 (reinício controlado da simulação); 2026-11-08 — A5: função de hash do sorteio, gravação do gabarito e resultado observado da linha de JSON inválido; abertura da etapa 1.5: coluna `_corrupt_record` na bronze (ADR 0004) |
 | **Documentos relacionados** | [ADR 0001 — Organização da landing](../adr/0001-organizacao-landing.md) · [ADR 0002 — Pedido válido e entrega no prazo](../adr/0002-pedido-valido-e-entrega-no-prazo.md) · [Dicionário de métricas v0](../dicionario_metricas.md) |
 
 ---
@@ -264,7 +264,7 @@ Justificativa:
 | Fora de ordem | decorrência do atraso nos eventos de status (o `delivered` chega antes do `shipped`), mais o embaralhamento das linhas nos arquivos de eventos | — | silver — ordenação por `event_sequence` |
 | Coluna nova | a partir de uma data configurada, `order_payments` passa a conter `payment_gateway` | uma data fixa | bronze — evolução de schema |
 | Valor fora do padrão | alguns valores de `price` emitidos com vírgula decimal (`"12,90"`) | uma data fixa, poucos registros | silver — tipagem e quarentena |
-| Arquivo corrompido | uma linha de JSON inválido em um arquivo | uma data fixa, um arquivo | bronze — registro preservado com as colunas nulas (resultado observado na etapa 1.4; tratamento definido na etapa 1.5) |
+| Arquivo corrompido | uma linha de JSON inválido em um arquivo | uma data fixa, um arquivo | bronze — texto original da linha em `_corrupt_record` (ADR 0004) |
 
 Os reenvios usam, de propósito, um **nome diferente** do arquivo original: representam a origem enviando o mesmo dado duas vezes, que é uma **duplicidade de negócio** e deve ser preservada na bronze (B6). A duplicidade técnica, causada pela reexecução do nosso próprio processo, é impedida pelas garantias de A3.
 
