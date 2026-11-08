@@ -2,7 +2,7 @@
 
 Índice do diário de bordo. Cada fase tem seu próprio arquivo com o que foi feito, as decisões e as pendências; este arquivo guarda só o que vale para o projeto todo.
 
-**Última atualização:** 2026-11-07 · **Fase atual:** [Fase 1 — Simulador e Bronze](fase-1-simulador-bronze.md) (em andamento — etapa 1.3 concluída)
+**Última atualização:** 2026-11-08 · **Fase atual:** [Fase 1 — Simulador e Bronze](fase-1-simulador-bronze.md) (em andamento — etapa 1.4 concluída)
 
 ## Fases
 
