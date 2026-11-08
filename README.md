@@ -38,7 +38,7 @@ Ambiente: Databricks Free Edition (compute serverless).
 ## Roadmap
 
 - [x] Fase 0 — Fundação: catálogo, schemas, landing, métricas oficiais v0
-- [ ] Fase 1 — Simulador e ingestão bronze (Auto Loader)
+- [x] Fase 1 — Simulador e ingestão bronze (Auto Loader)
 - [ ] Fase 2 — Silver e qualidade de dados
 - [ ] Fase 3 — CDC e SCD2
 - [ ] Fase 4 — Gold, métricas e dashboard

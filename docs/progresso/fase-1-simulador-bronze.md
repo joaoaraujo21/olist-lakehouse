@@ -1,8 +1,8 @@
 # Fase 1 — Simulador e Bronze
 
-- **Período previsto:** semanas 2–3
-- **Status:** 🔄 em andamento — etapa 1.4 (caos + CDC) concluída; próxima: 1.5 (aceite e ADRs)
-- **Branch/PRs:** `fase-1/desenho` (PR #3), `fase-1/estrutura-controle` (PR #4), `fase-1/simulador-base` (PR #5), `fase-1/bronze` (PR #6), `fase-1/caos-cdc` (PR #7)
+- **Período:** 2026-11-02 a 2026-11-08
+- **Status:** ✅ concluída
+- **Branch/PRs:** `fase-1/desenho` (PR #3), `fase-1/estrutura-controle` (PR #4), `fase-1/simulador-base` (PR #5), `fase-1/bronze` (PR #6), `fase-1/caos-cdc` (PR #7), `fase-1/aceite` (PR #8)
 
 ## Objetivo
 
@@ -29,7 +29,7 @@
 | 1.2b Simulador base | notebook `src/simulador/01_simulador_base`: lotes "limpos" em `raw_data/<entidade>/` | ✅ concluída — PR #5 |
 | 1.3 Bronze | Auto Loader por entidade + auditoria | ✅ concluída — PR #6 |
 | 1.4 Caos + CDC | duplicatas, atraso, fora de ordem, schema, CDC | ✅ concluída — PR #7 |
-| 1.5 Aceite | 3× sem duplicar; schema quebrado e stream sobrevive; ADRs | — |
+| 1.5 Aceite | 3× sem duplicar; schema quebrado e stream sobrevive; ADRs | ✅ concluída — PR #8 |
 
 ## O que foi feito
 
@@ -66,10 +66,15 @@
 - 2026-11-08 — Etapa 1.4, Parte 6, carga 1 (2026-09-06 a 2026-10-05): 43 arquivos e 1.036.392 linhas; 42 falhas no gabarito (32 duplicatas da carga inicial de `sellers`, 4 reenvios e 6 dias de eventos embaralhados). Bronze criada do zero com 9 tabelas (`order_reviews` ainda sem arquivos); landing igual à bronze em todos os dias, duplicatas e reenvios da bronze idênticos ao gabarito, reexecução com 0 linhas.
 - 2026-11-08 — Etapa 1.4, Parte 6, carga 2 (2026-10-06 a 2026-10-31): 93 arquivos e 2.789 linhas; 116 falhas no gabarito nesses dias. Na bronze, a coluna `payment_gateway` de 2026-10-08 provocou a evolução de schema prevista: a primeira tentativa terminou com `UNKNOWN_FIELD_EXCEPTION`, o schema foi atualizado e a nova tentativa gravou as 379 linhas, com a coluna nula nos dias anteriores. A tabela `order_reviews` foi criada com o primeiro arquivo (2026-10-09). Conferência com o gabarito sem divergências: atrasos (31 eventos e 18 itens, mesma chave e mesmo dia), duplicatas e reenvios de todas as entidades, 4 valores com vírgula. A linha de JSON inválido de 2026-10-10 foi gravada como registro com todas as colunas de negócio nulas e `_rescued_data` nulo (ver "Problemas encontrados").
 - 2026-11-08 — Validação final da bronze após a carga 2: 1.039.181 linhas na landing e na bronze, sem divergências por entidade e dia; reexecução com 0 linhas nas 10 entidades. Etapa 1.4 concluída: reinício controlado, falhas configuráveis e reproduzíveis com gabarito conferido contra a bronze, e feeds CDC coerentes. Pendente para a 1.5: decisão sobre o tratamento da linha de JSON inválido na bronze (ADR).
+- 2026-11-08 — PR #7 integrado à `main` (squash `9d4dafb`); a revisão identificou o valor de confirmação do reset salvo no notebook e os documentos com fim de linha CRLF, ambos corrigidos antes do merge. O corpo da mensagem do squash manteve o texto pré-preenchido pelo GitHub, com três trechos truncados; o histórico da `main` não foi reescrito, e a descrição correta está no PR.
+- 2026-11-08 — Etapa 1.5 aberta, branch `fase-1/aceite` criada a partir da `main` atualizada. ADR 0003 (idempotência ponta a ponta) aceito. ADR 0004 aceito: linhas de JSON inválido passam a ser guardadas em `_corrupt_record` na bronze (`columnNameOfCorruptRecord` com `schemaHints`), alternativa recomendada pela documentação do Auto Loader; `badRecordsPath` descartado. Como a mudança altera o schema inferido, será aplicada com o reinício controlado e uma nova geração das duas cargas, que também produz as evidências do aceite.
+- 2026-11-08 — Etapa 1.5: bronze ajustada (`_corrupt_record` nas opções do Auto Loader, comentário da coluna e célula de listagem das linhas inválidas), reinício controlado e nova geração das duas cargas. Resultados idênticos aos da etapa 1.4 (43 e 93 arquivos; 1.036.392 e 2.789 linhas; 42 e 116 falhas no gabarito; mesmos tamanhos de arquivo), o que confirma o determinismo do simulador. Bronze com 1.039.181 linhas nas 10 tabelas, todas com `_corrupt_record` documentada; a linha inválida de `order_items` de 2026-10-10 está gravada com o texto original em `_corrupt_record`. A evolução de schema de `order_payments` repetiu o comportamento da 1.4.
+- 2026-11-08 — Desafio de aceite 1 (gerador executado 3 vezes sem duplicidade): reprocessamento das janelas 2026-10-06 a 2026-10-31, 2026-09-06 a 2026-10-05 e 2026-10-10, com a bronze executada após cada um. O simulador regravou os arquivos com o mesmo conteúdo (mesmas contagens de arquivos e linhas) e o gabarito foi substituído nos dias reprocessados, mantendo 158 falhas. A bronze gravou 0 linhas nas 10 entidades em todas as execuções; linhas e versões Delta das tabelas ficaram idênticas às anteriores aos reprocessamentos, e os arquivos de 2026-10-10, regravados depois da ingestão, não foram lidos novamente. Desafio de aceite 2 (mudança de schema): a coluna `payment_gateway` interrompeu o stream de `order_payments` nas etapas 1.4 e 1.5, e a nova tentativa concluiu a ingestão com a coluna acrescentada à tabela.
+- 2026-11-08 — Fase 1 concluída.
 
 ## Decisões
 
-Ver o resumo no fim de `docs/design/fase-1-simulador-bronze.md`. Principais: datas +3.654 dias (522 semanas); relógio diário com `dias_por_execucao`; estado em `ops.simulator_runs`; `orders` dividido em cabeçalho + `order_status_events`; `customers`/`sellers` como CDC; JSON Lines com caminho determinístico `raw_data/<entidade>/sim_date=.../`; caos determinístico com gabarito em `ops.simulator_chaos_log`; bronze em notebook (Structured Streaming + Auto Loader), `availableNow`, checkpoints em `/Volumes/olist/ops/checkpoints/bronze/<entidade>/`, tudo string + `addNewColumns`; dedup de negócio na silver.
+Ver o resumo no fim de `docs/design/fase-1-simulador-bronze.md`. Principais: datas +3.654 dias (522 semanas); relógio diário com `dias_por_execucao`; estado em `ops.simulator_runs`; `orders` dividido em cabeçalho + `order_status_events`; `customers`/`sellers` como CDC; JSON Lines com caminho determinístico `raw_data/<entidade>/sim_date=.../`; caos determinístico com gabarito em `ops.simulator_chaos_log`; idempotência ponta a ponta (ADR 0003); linhas de JSON inválido em `_corrupt_record` (ADR 0004); bronze em notebook (Structured Streaming + Auto Loader), `availableNow`, checkpoints em `/Volumes/olist/ops/checkpoints/bronze/<entidade>/`, tudo string + `addNewColumns`; dedup de negócio na silver.
 
 ## Problemas encontrados e como foram resolvidos
 
@@ -78,9 +83,10 @@ Ver o resumo no fim de `docs/design/fase-1-simulador-bronze.md`. Principais: dat
 | Notebook de uma parte isolada falhou com `NameError` | parte importada como notebook separado; as variáveis vêm das partes anteriores | notebook único `01_simulador_base`, com as partes em sequência |
 | Primeiro teste de MD5 deu "OK" sem testar nada | o reprocessamento não havia rodado; foram comparados os mesmos arquivos | conferir a evidência (nova linha em `simulator_runs`, data de modificação do arquivo) antes de aceitar o resultado |
 | Ingestão de `order_reviews` falhou com `CF_EMPTY_DIR_FOR_SCHEMA_INFERENCE` | a entidade ainda não tem nenhum arquivo na landing (avaliações são emitidas dias depois da entrega); sem arquivo, o Auto Loader não consegue inferir o schema | entidade ignorada enquanto não houver pasta `sim_date=`; quando o primeiro arquivo chegar, o stream começa e lê todos os existentes. Alternativa descartada: declarar o schema na bronze (contraria a decisão B4) |
-| Linha de JSON inválido gravada na bronze como registro com todas as colunas de negócio nulas, sem conteúdo em `_rescued_data` | o `_rescued_data` captura apenas colunas desconhecidas, tipos divergentes e diferenças de maiúsculas; registros malformados, no modo padrão, viram linhas nulas. O desenho A5 previa "dados resgatados" | comportamento registrado; o conteúdo original permanece no arquivo da landing, identificado por `_source_file`. Tratamento a decidir na etapa 1.5 (ADR) |
+| Linha de JSON inválido gravada na bronze como registro com todas as colunas de negócio nulas, sem conteúdo em `_rescued_data` | o `_rescued_data` captura apenas colunas desconhecidas, tipos divergentes e diferenças de maiúsculas; registros malformados, no modo padrão, viram linhas nulas. O desenho A5 previa "dados resgatados" | comportamento registrado; o conteúdo original permanece no arquivo da landing, identificado por `_source_file`. Na etapa 1.5, a bronze passa a guardar o texto da linha em `_corrupt_record` (ADR 0004) |
 | Valor `APAGAR` do parâmetro de confirmação do reset salvo no notebook e enviado ao repositório (identificado na revisão do PR #7) | o Databricks guarda no notebook o valor atual dos parâmetros; uma confirmação esquecida executaria a exclusão na próxima execução | a confirmação passa a exigir a data do dia (`APAGAR AAAA-MM-DD`) e expira no dia seguinte; parâmetro limpo antes do commit |
 | Documentos com fim de linha CRLF no PR #7, o que apresentava os arquivos como totalmente reescritos | arquivos locais gravados com fim de linha do Windows antes de serem colados | arquivos convertidos para LF e colados novamente |
+| Na execução com "Run all", as células seguintes à de ingestão não rodaram após a evolução de schema de `order_payments` (etapas 1.4 e 1.5) | a célula de ingestão concluiu, mas o notebook exibe a consulta de streaming interrompida pelo `UNKNOWN_FIELD_EXCEPTION` e marca a célula como falha, o que interrompe o "Run all" | células seguintes executadas manualmente; verificar na Fase 7 se o mesmo ocorre na task de um job, onde a falha da célula encerraria a execução |
 | Reset indicou "INCOMPLETO", embora tudo tivesse sido apagado | o inventário verificava pastas com `os.path.exists` (acesso aos volumes pelo sistema de arquivos local), que manteve em cache as pastas removidas pelo `dbutils.fs.rm` | inventário passa a listar os volumes com `dbutils.fs.ls`, a mesma API usada na exclusão, e só em raízes de volume, que sempre existem; regra: verificar com a mesma API que alterou |
 | PR do simulador base com conflito em `docs/progresso/fase-1-simulador-bronze.md` | a branch `fase-1/simulador-base` foi criada a partir da branch antiga `fase-1/estrutura-controle`, e não da `main` atualizada; com squash merge, os commits originais do PR #4 não fazem parte do histórico da `main` | conflito resolvido no GitHub mantendo a versão da branch; regra: antes de criar uma branch, mudar para a `main` e fazer Pull |
 
@@ -92,4 +98,24 @@ Ver o resumo no fim de `docs/design/fase-1-simulador-bronze.md`. Principais: dat
 
 ## Encerramento — pendências para a Fase 2
 
-_(preencher ao concluir)_
+**Resultado dos desafios de aceite**
+- Rodar o gerador 3 vezes sem duplicidade indevida na bronze: ✅ (registro de 2026-11-08).
+- Quebrar o schema de propósito e o pipeline sobreviver: ✅ (`payment_gateway` em 2026-10-08).
+
+**Estado entregue**
+- Simulação gerada de 2026-09-06 a 2026-10-31, com falhas ativas; próxima execução continua em 2026-11-01.
+- `olist.bronze` com 10 tabelas e 1.039.181 linhas, todas com `_rescued_data`, `_corrupt_record` e colunas de auditoria documentadas.
+- Gabarito com 158 falhas em `ops.simulator_chaos_log`.
+
+**Para a silver (Fase 2)**
+- Deduplicação validada contra o gabarito: `duplicate_record` (mesma chave no mesmo arquivo) e `file_resend` (arquivo `..._retry-1.json`).
+- Chegada atrasada e fora de ordem: ordenar por `event_ts` e `event_sequence`, nunca pelo `sim_date`.
+- Quarentena em `olist.quality` para `_corrupt_record` e `_rescued_data` preenchidos e para valores fora do padrão (`price` com vírgula decimal em 2026-10-07).
+- `payment_gateway` nula antes de 2026-10-08: coluna opcional no contrato da silver.
+- Feeds CDC: o `DELETE` traz apenas a chave; as exclusões só aparecem a partir de 2027, o que exige avançar a simulação antes da Fase 3.
+
+**Pendências técnicas**
+- [ ] Configurar a proteção da `main` no GitHub (herdada da Fase 0).
+- [ ] Fase 7: verificar se a interrupção esperada do stream na evolução de schema faz a task de um job falhar, como interrompe o "Run all" no notebook.
+- [ ] Fase 7: testes unitários (pytest) das funções puras do simulador e da bronze.
+- [ ] Restringir a exceção genérica em `has_source_files` (bronze) aos erros de caminho inexistente.
