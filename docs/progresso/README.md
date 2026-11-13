@@ -2,7 +2,7 @@
 
 Índice do diário de bordo. Cada fase tem seu próprio arquivo com o que foi feito, as decisões e as pendências; este arquivo guarda só o que vale para o projeto todo.
 
-**Última atualização:** 2026-11-12 · **Fase atual:** [Fase 3 — CDC e SCD2](fase-3-cdc-scd2.md) (a iniciar)
+**Última atualização:** 2026-11-13 · **Fase atual:** [Fase 4 — Gold e Métricas](fase-4-gold-metricas.md) (a abrir)
 
 ## Fases
 
@@ -11,7 +11,7 @@
 | 0 — Fundação | ✅ concluída em 2026-11-02 | [fase-0-fundacao.md](fase-0-fundacao.md) |
 | 1 — Simulador e Bronze | ✅ concluída em 2026-11-08 | [fase-1-simulador-bronze.md](fase-1-simulador-bronze.md) |
 | 2 — Silver e Qualidade | ✅ concluída em 2026-11-12 | [fase-2-silver-qualidade.md](fase-2-silver-qualidade.md) |
-| 3 — CDC e SCD2 | a iniciar | [fase-3-cdc-scd2.md](fase-3-cdc-scd2.md) |
+| 3 — CDC e SCD2 | ✅ concluída em 2026-11-13 | [fase-3-cdc-scd2.md](fase-3-cdc-scd2.md) |
 | 4 — Gold e Métricas | — | |
 | 5 — Streaming | — | |
 | 6 — Governança e LGPD | — | |
