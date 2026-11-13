@@ -65,4 +65,3 @@ Todas consolidadas no [ADR 0006](../adr/0006-historico-scd2-do-cadastro.md).
 - **Fase 6:** o histórico guarda os **endereços antigos**, então a exclusão de dados pessoais precisa alcançar `customers_historico` (e o `VACUUM`); política de acesso por categoria de PII; evidência auditável.
 - **Fase 7:** testes unitários de `registrar_historico` e das listas de colunas; módulo único para funções e chaves (hoje repetidas entre notebooks); orquestração do pipeline e da validação em job; segunda validação automática para provar idempotência do histórico.
 - **Pendências herdadas:** proteção da `main` no GitHub; últimos 2 meses do dataset para a Fase 5.
-- **Para o João estudar:** perguntas de fixação e de entrevista em `estudos/fase-3-cdc-scd2.md`.
