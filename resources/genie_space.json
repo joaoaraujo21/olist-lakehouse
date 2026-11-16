@@ -1,0 +1,185 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      {
+        "id": "17c3c485e4904a899e4398fa8d9305cd",
+        "question": [
+          "Qual a taxa de cancelamento por UF do cliente?"
+        ]
+      },
+      {
+        "id": "46e2a57a22c349d8a020616602e51961",
+        "question": [
+          "Quais as 10 categorias com maior GMV?"
+        ]
+      },
+      {
+        "id": "53fec01821514a75914cc70ee2a6261b",
+        "question": [
+          "Quais os 10 vendedores com maior GMV?"
+        ]
+      },
+      {
+        "id": "86fbed6592024d528e4b2f6c96b5683f",
+        "question": [
+          "Como a nota média da review muda com o atraso na entrega?"
+        ]
+      },
+      {
+        "id": "99ddff29527b47b5bc10f576279a81b5",
+        "question": [
+          "Qual o GMV por mês?"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "olist.gold.gold_atraso_vs_review",
+        "description": [
+          "Nota média da review por faixa de atraso na entrega, só pedidos entregues com review."
+        ]
+      },
+      {
+        "identifier": "olist.gold.gold_daily_kpis",
+        "description": [
+          "KPIs por dia da compra em colunas aditivas (contagens e somas). Razões: ticket = gmv / pedidos_validos; lead time médio = soma_lead_time_dias / pedidos_entregues."
+        ]
+      },
+      {
+        "identifier": "olist.gold.gold_delivery_sla",
+        "description": [
+          "SLA de entrega por mês da compra (ano_mes) e UF do cliente, só pedidos entregues: entregues, no prazo, atrasados, lead time e atraso."
+        ]
+      },
+      {
+        "identifier": "olist.gold.gold_seller_scorecard",
+        "description": [
+          "Scorecard de vendedores, uma linha por versão do cadastro (cidade e UF que o vendedor tinha na data da venda). Um pedido com itens de dois vendedores aparece nos dois, então não some pedidos entre vendedores para obter o total de pedidos."
+        ]
+      },
+      {
+        "identifier": "olist.gold.mv_concentracao",
+        "description": [
+          "Metric View da concentração de vendas: GMV dos 10 maiores vendedores de cada mês dividido pelo GMV do mês. Dimensão: ano_mes."
+        ]
+      },
+      {
+        "identifier": "olist.gold.mv_itens",
+        "description": [
+          "Metric View de GMV, itens vendidos, pedidos válidos e ticket médio no grão do item. Recortes: data_compra, ano_mes, categoria (em inglês), seller_id e uf_vendedor (UF do vendedor na data da venda). Consulte com MEASURE(medida)."
+        ]
+      },
+      {
+        "identifier": "olist.gold.mv_pedidos",
+        "description": [
+          "Metric View dos KPIs no grão do pedido: GMV, ticket médio, taxa de cancelamento, % entregas no prazo, lead time, review score médio e taxa de recompra. Recortes: data_compra, ano_mes, ano, status_atual e uf_cliente. Consulte com MEASURE(medida) e GROUP BY nas dimensões."
+        ]
+      }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "3b3a19f429314861a98e9468f060f6cd",
+        "content": [
+          "Você é o assistente de dados do marketplace Olist. Responda sempre em português do Brasil, com números e uma frase de interpretação.\n",
+          "\n",
+          "Definições oficiais (dicionário de métricas v1.1):\n",
+          "- Pedido válido: tem ao menos 1 item e o status atual não é canceled nem unavailable.\n",
+          "- GMV: soma de preço + frete dos itens de pedidos válidos. Não use payment_value.\n",
+          "- Ticket médio: GMV dividido pelos pedidos válidos.\n",
+          "- Taxa de cancelamento: pedidos canceled divididos por todos os pedidos criados (unavailable não entra).\n",
+          "- % de entregas no prazo: entregues no prazo (data da entrega <= data estimada, comparando só o dia) divididas pelos pedidos entregues.\n",
+          "- Lead time: dias entre a compra e a entrega, só pedidos entregues; informe a média e a mediana.\n",
+          "- Review score médio: nota da review mais recente dos pedidos entregues.\n",
+          "- Taxa de recompra: clientes com 2 ou mais pedidos válidos divididos pelos clientes com 1 ou mais.\n",
+          "- Concentração de vendas: GMV do top 10 de vendedores do mês dividido pelo GMV do mês.\n",
+          "\n",
+          "Regras:\n",
+          "- Para os KPIs, prefira as Metric Views (mv_pedidos, mv_itens, mv_concentracao) e leia as medidas com MEASURE(). Para cada recorte use as dimensões da própria Metric View.\n",
+          "- O período de referência é a data da compra. Os dados vão de setembro de 2026 a agosto de 2028: nunca use a data de hoje como referência; use o intervalo dos dados.\n",
+          "- No scorecard, um pedido com itens de mais de um vendedor aparece em cada um deles; para o total de pedidos use mv_pedidos. O GMV do scorecard não duplica.\n",
+          "- Atraso é a data da entrega menos a data estimada: positivo = atrasou, negativo = adiantado.\n",
+          "- Não existem dados pessoais de clientes neste espaço; se perguntarem por clientes específicos, explique que só há métricas agregadas."
+        ]
+      }
+    ],
+    "example_question_sqls": [
+      {
+        "id": "046b74e6596b4614bc56e1282b71666d",
+        "question": [
+          "Em quais UFs a entrega no prazo é pior?"
+        ],
+        "sql": [
+          "SELECT uf_cliente, SUM(entregues_no_prazo) / SUM(pedidos_entregues) AS pct_no_prazo, SUM(pedidos_entregues) AS entregues FROM olist.gold.gold_delivery_sla GROUP BY uf_cliente ORDER BY pct_no_prazo LIMIT 10"
+        ]
+      },
+      {
+        "id": "139dbdeb9c354a9a9272bfa74f5177cd",
+        "question": [
+          "Quais vendedores mudaram de endereço e quanto venderam em cada versão do cadastro?"
+        ],
+        "sql": [
+          "SELECT seller_id, seller_city, seller_state, valido_de, valido_ate, itens, gmv FROM olist.gold.gold_seller_scorecard WHERE seller_id IN (SELECT seller_id FROM olist.gold.gold_seller_scorecard GROUP BY seller_id HAVING COUNT(*) > 1) ORDER BY seller_id, valido_de"
+        ]
+      },
+      {
+        "id": "23d80c7cd8744f598a2efb76503c8c11",
+        "question": [
+          "Qual o GMV por mês?"
+        ],
+        "sql": [
+          "SELECT ano_mes, MEASURE(gmv) AS gmv FROM olist.gold.mv_pedidos GROUP BY ano_mes ORDER BY ano_mes"
+        ]
+      },
+      {
+        "id": "4051ff07540e491c9e47590f0eced1df",
+        "question": [
+          "Qual a taxa de recompra e o review score médio?"
+        ],
+        "sql": [
+          "SELECT MEASURE(taxa_recompra) AS taxa_recompra, MEASURE(review_score_medio) AS review_score_medio FROM olist.gold.mv_pedidos"
+        ]
+      },
+      {
+        "id": "69d4105cfdc14451a628bcb827019cac",
+        "question": [
+          "Quais as 10 categorias com maior GMV?"
+        ],
+        "sql": [
+          "SELECT categoria, MEASURE(gmv) AS gmv FROM olist.gold.mv_itens GROUP BY categoria ORDER BY gmv DESC LIMIT 10"
+        ]
+      },
+      {
+        "id": "9c22fa599a544ddf81a44a69d84145df",
+        "question": [
+          "Como a nota média da review muda com o atraso na entrega?"
+        ],
+        "sql": [
+          "SELECT faixa_atraso, pedidos, review_score_medio, pct_nota_1_ou_2 FROM olist.gold.gold_atraso_vs_review ORDER BY faixa_atraso"
+        ]
+      },
+      {
+        "id": "e552485bedc0451fabb0e51fa9a7741a",
+        "question": [
+          "Quais os 10 vendedores com maior GMV?"
+        ],
+        "sql": [
+          "SELECT seller_id, SUM(gmv) AS gmv, SUM(itens) AS itens FROM olist.gold.gold_seller_scorecard GROUP BY seller_id ORDER BY gmv DESC LIMIT 10"
+        ]
+      },
+      {
+        "id": "f504e4c04bca45a0a250cbce05fe623c",
+        "question": [
+          "Qual a taxa de cancelamento por UF do cliente?"
+        ],
+        "sql": [
+          "SELECT uf_cliente, MEASURE(taxa_cancelamento) AS taxa_cancelamento FROM olist.gold.mv_pedidos GROUP BY uf_cliente ORDER BY taxa_cancelamento DESC"
+        ]
+      }
+    ]
+  }
+}

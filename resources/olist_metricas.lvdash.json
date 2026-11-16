@@ -1,0 +1,1327 @@
+{
+  "datasets": [
+    {
+      "name": "ds_kpis",
+      "displayName": "KPIs oficiais (sem recorte)",
+      "queryLines": [
+        "SELECT MEASURE(gmv) AS gmv, MEASURE(pedidos_validos) AS pedidos_validos, MEASURE(ticket_medio) AS ticket_medio,\n",
+        "       MEASURE(taxa_cancelamento) AS taxa_cancelamento, MEASURE(pct_entregas_no_prazo) AS pct_no_prazo,\n",
+        "       MEASURE(lead_time_mediana_dias) AS lead_time_mediana, MEASURE(lead_time_medio_dias) AS lead_time_medio,\n",
+        "       MEASURE(review_score_medio) AS review_medio, MEASURE(taxa_recompra) AS taxa_recompra\n",
+        "FROM olist.gold.mv_pedidos\n"
+      ]
+    },
+    {
+      "name": "ds_concentracao",
+      "displayName": "Concentração de vendas",
+      "queryLines": [
+        "SELECT MEASURE(concentracao_top10) AS concentracao_top10 FROM olist.gold.mv_concentracao\n"
+      ]
+    },
+    {
+      "name": "ds_mensal",
+      "displayName": "KPIs por mês da compra",
+      "queryLines": [
+        "SELECT to_date(concat(ano_mes, '-01')) AS mes, MEASURE(gmv) AS gmv, MEASURE(pedidos_validos) AS pedidos_validos,\n",
+        "       MEASURE(taxa_cancelamento) AS taxa_cancelamento, MEASURE(pct_entregas_no_prazo) AS pct_no_prazo,\n",
+        "       MEASURE(review_score_medio) AS review_medio\n",
+        "FROM olist.gold.mv_pedidos GROUP BY ano_mes ORDER BY ano_mes\n"
+      ]
+    },
+    {
+      "name": "ds_uf",
+      "displayName": "GMV por UF do cliente",
+      "queryLines": [
+        "SELECT uf_cliente, MEASURE(gmv) AS gmv FROM olist.gold.mv_pedidos GROUP BY uf_cliente ORDER BY gmv DESC LIMIT 10\n"
+      ]
+    },
+    {
+      "name": "ds_categoria",
+      "displayName": "GMV por categoria",
+      "queryLines": [
+        "SELECT categoria, MEASURE(gmv) AS gmv FROM olist.gold.mv_itens GROUP BY categoria ORDER BY gmv DESC LIMIT 15\n"
+      ]
+    },
+    {
+      "name": "ds_atraso",
+      "displayName": "Atraso x review",
+      "queryLines": [
+        "SELECT faixa_atraso, pedidos, review_score_medio, pct_nota_1_ou_2 FROM olist.gold.gold_atraso_vs_review ORDER BY faixa_atraso\n"
+      ]
+    },
+    {
+      "name": "ds_sla_uf",
+      "displayName": "Entrega no prazo por UF",
+      "queryLines": [
+        "SELECT uf_cliente, sum(entregues_no_prazo) / sum(pedidos_entregues) AS pct_no_prazo, sum(pedidos_entregues) AS entregues\n",
+        "FROM olist.gold.gold_delivery_sla GROUP BY uf_cliente ORDER BY pct_no_prazo\n"
+      ]
+    },
+    {
+      "name": "ds_scorecard",
+      "displayName": "Scorecard de vendedores",
+      "queryLines": [
+        "SELECT seller_id, seller_city, seller_state, valido_de, valido_ate, pedidos, itens, gmv,\n",
+        "       taxa_cancelamento, pct_entregas_no_prazo, review_score_medio\n",
+        "FROM olist.gold.gold_seller_scorecard ORDER BY gmv DESC LIMIT 1000\n"
+      ]
+    },
+    {
+      "name": "ds_mudaram",
+      "displayName": "Vendedores que mudaram de endereço",
+      "queryLines": [
+        "SELECT seller_id, seller_city, seller_state, valido_de, valido_ate, itens, gmv\n",
+        "FROM olist.gold.gold_seller_scorecard\n",
+        "WHERE seller_id IN (SELECT seller_id FROM olist.gold.dim_seller GROUP BY seller_id HAVING count(*) > 1)\n",
+        "ORDER BY seller_id, valido_de LIMIT 300\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "pag_exec",
+      "displayName": "Visão executiva",
+      "layout": [
+        {
+          "widget": {
+            "name": "c_gmv",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "gmv",
+                      "expression": "MAX(`gmv`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "GMV (R$)"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "gmv",
+                  "displayName": "GMV (R$)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_ticket",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "ticket_medio",
+                      "expression": "MAX(`ticket_medio`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Ticket médio (R$)"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "ticket_medio",
+                  "displayName": "Ticket médio (R$)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_cancel",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "taxa_cancelamento",
+                      "expression": "MAX(`taxa_cancelamento`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Taxa de cancelamento"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "taxa_cancelamento",
+                  "displayName": "Taxa de cancelamento",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_prazo",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "pct_no_prazo",
+                      "expression": "MAX(`pct_no_prazo`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "% de entregas no prazo"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "pct_no_prazo",
+                  "displayName": "% de entregas no prazo",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_lead",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "lead_time_mediana",
+                      "expression": "MAX(`lead_time_mediana`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Lead time mediano (dias)"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "lead_time_mediana",
+                  "displayName": "Lead time mediano (dias)",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_review",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "review_medio",
+                      "expression": "MAX(`review_medio`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Review score médio"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "review_medio",
+                  "displayName": "Review score médio",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_recompra",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kpis",
+                  "fields": [
+                    {
+                      "name": "taxa_recompra",
+                      "expression": "MAX(`taxa_recompra`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Taxa de recompra"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "taxa_recompra",
+                  "displayName": "Taxa de recompra",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_conc",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_concentracao",
+                  "fields": [
+                    {
+                      "name": "concentracao_top10",
+                      "expression": "MAX(`concentracao_top10`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Concentração (top 10 do mês)"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "concentracao_top10",
+                  "displayName": "Concentração (top 10 do mês)",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "g_gmv_mes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_mensal",
+                  "fields": [
+                    {
+                      "name": "mes",
+                      "expression": "`mes`"
+                    },
+                    {
+                      "name": "gmv",
+                      "expression": "`gmv`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "GMV por mês da compra (R$)"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "mes",
+                  "displayName": "Mês",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "gmv",
+                  "displayName": "GMV",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "g_prazo_mes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_mensal",
+                  "fields": [
+                    {
+                      "name": "mes",
+                      "expression": "`mes`"
+                    },
+                    {
+                      "name": "pct_no_prazo",
+                      "expression": "`pct_no_prazo`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "% de entregas no prazo por mês"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "mes",
+                  "displayName": "Mês",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "pct_no_prazo",
+                  "displayName": "% no prazo",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 6,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "g_uf",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_uf",
+                  "fields": [
+                    {
+                      "name": "uf_cliente",
+                      "expression": "`uf_cliente`"
+                    },
+                    {
+                      "name": "gmv",
+                      "expression": "`gmv`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "GMV por UF do cliente (top 10)"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "uf_cliente",
+                  "displayName": "UF",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "gmv",
+                  "displayName": "GMV",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "g_categoria",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_categoria",
+                  "fields": [
+                    {
+                      "name": "categoria",
+                      "expression": "`categoria`"
+                    },
+                    {
+                      "name": "gmv",
+                      "expression": "`gmv`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "GMV por categoria (top 15)"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "categoria",
+                  "displayName": "Categoria",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "gmv",
+                  "displayName": "GMV",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "pag_entrega",
+      "displayName": "Entrega e atraso",
+      "layout": [
+        {
+          "widget": {
+            "name": "g_atraso_nota",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_atraso",
+                  "fields": [
+                    {
+                      "name": "faixa_atraso",
+                      "expression": "`faixa_atraso`"
+                    },
+                    {
+                      "name": "review_score_medio",
+                      "expression": "`review_score_medio`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Nota média da review por faixa de atraso"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "faixa_atraso",
+                  "displayName": "Faixa de atraso",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "review_score_medio",
+                  "displayName": "Nota média",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "g_atraso_baixa",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_atraso",
+                  "fields": [
+                    {
+                      "name": "faixa_atraso",
+                      "expression": "`faixa_atraso`"
+                    },
+                    {
+                      "name": "pct_nota_1_ou_2",
+                      "expression": "`pct_nota_1_ou_2`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Parcela de notas 1 ou 2 por faixa de atraso"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "faixa_atraso",
+                  "displayName": "Faixa de atraso",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "pct_nota_1_ou_2",
+                  "displayName": "% de notas 1 ou 2",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "t_atraso",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_atraso",
+                  "fields": [
+                    {
+                      "name": "faixa_atraso",
+                      "expression": "`faixa_atraso`"
+                    },
+                    {
+                      "name": "pedidos",
+                      "expression": "`pedidos`"
+                    },
+                    {
+                      "name": "review_score_medio",
+                      "expression": "`review_score_medio`"
+                    },
+                    {
+                      "name": "pct_nota_1_ou_2",
+                      "expression": "`pct_nota_1_ou_2`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "frame": {
+                "showTitle": true,
+                "title": "Atraso × review (pedidos entregues com review)"
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 15,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "faixa_atraso",
+                    "title": "Faixa de atraso",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000
+                  },
+                  {
+                    "fieldName": "pedidos",
+                    "title": "Pedidos",
+                    "type": "integer",
+                    "displayAs": "integer",
+                    "visible": true,
+                    "order": 100001
+                  },
+                  {
+                    "fieldName": "review_score_medio",
+                    "title": "Nota média",
+                    "type": "float",
+                    "numberFormat": "0.00",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100002
+                  },
+                  {
+                    "fieldName": "pct_nota_1_ou_2",
+                    "title": "% notas 1 ou 2",
+                    "type": "float",
+                    "numberFormat": "0.0000",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100003
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "g_sla_uf",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_sla_uf",
+                  "fields": [
+                    {
+                      "name": "uf_cliente",
+                      "expression": "`uf_cliente`"
+                    },
+                    {
+                      "name": "pct_no_prazo",
+                      "expression": "`pct_no_prazo`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "% de entregas no prazo por UF do cliente"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "uf_cliente",
+                  "displayName": "UF",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "pct_no_prazo",
+                  "displayName": "% no prazo",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "pag_vendedores",
+      "displayName": "Scorecard de vendedores",
+      "layout": [
+        {
+          "widget": {
+            "name": "f_uf_vendedor",
+            "queries": [
+              {
+                "name": "f_uf_vendedor_q",
+                "query": {
+                  "datasetName": "ds_scorecard",
+                  "fields": [
+                    {
+                      "name": "seller_state",
+                      "expression": "`seller_state`"
+                    },
+                    {
+                      "name": "seller_state_associative_filter_predicate_group",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "UF do vendedor (na data da venda)"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "seller_state",
+                    "queryName": "f_uf_vendedor_q"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "t_scorecard",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_scorecard",
+                  "fields": [
+                    {
+                      "name": "seller_id",
+                      "expression": "`seller_id`"
+                    },
+                    {
+                      "name": "seller_city",
+                      "expression": "`seller_city`"
+                    },
+                    {
+                      "name": "seller_state",
+                      "expression": "`seller_state`"
+                    },
+                    {
+                      "name": "valido_de",
+                      "expression": "`valido_de`"
+                    },
+                    {
+                      "name": "valido_ate",
+                      "expression": "`valido_ate`"
+                    },
+                    {
+                      "name": "pedidos",
+                      "expression": "`pedidos`"
+                    },
+                    {
+                      "name": "itens",
+                      "expression": "`itens`"
+                    },
+                    {
+                      "name": "gmv",
+                      "expression": "`gmv`"
+                    },
+                    {
+                      "name": "taxa_cancelamento",
+                      "expression": "`taxa_cancelamento`"
+                    },
+                    {
+                      "name": "pct_entregas_no_prazo",
+                      "expression": "`pct_entregas_no_prazo`"
+                    },
+                    {
+                      "name": "review_score_medio",
+                      "expression": "`review_score_medio`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "frame": {
+                "showTitle": true,
+                "title": "Scorecard por versão do cadastro do vendedor"
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 15,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "seller_id",
+                    "title": "Vendedor",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000
+                  },
+                  {
+                    "fieldName": "seller_city",
+                    "title": "Cidade na venda",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100001
+                  },
+                  {
+                    "fieldName": "seller_state",
+                    "title": "UF",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100002
+                  },
+                  {
+                    "fieldName": "valido_de",
+                    "title": "Versão de",
+                    "type": "datetime",
+                    "displayAs": "datetime",
+                    "visible": true,
+                    "order": 100003
+                  },
+                  {
+                    "fieldName": "valido_ate",
+                    "title": "Versão até",
+                    "type": "datetime",
+                    "displayAs": "datetime",
+                    "visible": true,
+                    "order": 100004
+                  },
+                  {
+                    "fieldName": "pedidos",
+                    "title": "Pedidos",
+                    "type": "integer",
+                    "displayAs": "integer",
+                    "visible": true,
+                    "order": 100005
+                  },
+                  {
+                    "fieldName": "itens",
+                    "title": "Itens",
+                    "type": "integer",
+                    "displayAs": "integer",
+                    "visible": true,
+                    "order": 100006
+                  },
+                  {
+                    "fieldName": "gmv",
+                    "title": "GMV (R$)",
+                    "type": "float",
+                    "numberFormat": "0.00",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100007
+                  },
+                  {
+                    "fieldName": "taxa_cancelamento",
+                    "title": "Cancelamento",
+                    "type": "float",
+                    "numberFormat": "0.0000",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100008
+                  },
+                  {
+                    "fieldName": "pct_entregas_no_prazo",
+                    "title": "% no prazo",
+                    "type": "float",
+                    "numberFormat": "0.0000",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100009
+                  },
+                  {
+                    "fieldName": "review_score_medio",
+                    "title": "Nota média",
+                    "type": "float",
+                    "numberFormat": "0.00",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100010
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "t_mudaram",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_mudaram",
+                  "fields": [
+                    {
+                      "name": "seller_id",
+                      "expression": "`seller_id`"
+                    },
+                    {
+                      "name": "seller_city",
+                      "expression": "`seller_city`"
+                    },
+                    {
+                      "name": "seller_state",
+                      "expression": "`seller_state`"
+                    },
+                    {
+                      "name": "valido_de",
+                      "expression": "`valido_de`"
+                    },
+                    {
+                      "name": "valido_ate",
+                      "expression": "`valido_ate`"
+                    },
+                    {
+                      "name": "itens",
+                      "expression": "`itens`"
+                    },
+                    {
+                      "name": "gmv",
+                      "expression": "`gmv`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "frame": {
+                "showTitle": true,
+                "title": "Vendedores que mudaram de endereço: cada venda fica na cidade da data da compra"
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 15,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "seller_id",
+                    "title": "Vendedor",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000
+                  },
+                  {
+                    "fieldName": "seller_city",
+                    "title": "Cidade na venda",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100001
+                  },
+                  {
+                    "fieldName": "seller_state",
+                    "title": "UF",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100002
+                  },
+                  {
+                    "fieldName": "valido_de",
+                    "title": "Versão de",
+                    "type": "datetime",
+                    "displayAs": "datetime",
+                    "visible": true,
+                    "order": 100003
+                  },
+                  {
+                    "fieldName": "valido_ate",
+                    "title": "Versão até",
+                    "type": "datetime",
+                    "displayAs": "datetime",
+                    "visible": true,
+                    "order": 100004
+                  },
+                  {
+                    "fieldName": "itens",
+                    "title": "Itens vendidos",
+                    "type": "integer",
+                    "displayAs": "integer",
+                    "visible": true,
+                    "order": 100005
+                  },
+                  {
+                    "fieldName": "gmv",
+                    "title": "GMV (R$)",
+                    "type": "float",
+                    "numberFormat": "0.00",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100006
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 8
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
+}
