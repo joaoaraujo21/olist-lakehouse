@@ -1,6 +1,6 @@
 # ADR 0010 — `gold_orders_live`: MERGE idempotente, deduplicação e watermark
 
-- **Status:** aceito
+- **Status:** aceito; itens 4 e 5 da decisão substituídos pelo [ADR 0013](0013-relogio-do-watermark-instante-de-chegada.md)
 - **Data:** 2026-11-17
 - **Fase:** 5 — Streaming
 
