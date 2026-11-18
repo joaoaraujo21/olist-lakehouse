@@ -2,7 +2,7 @@
 
 Índice do diário de bordo. Cada fase tem seu próprio arquivo com o que foi feito, as decisões e as pendências; este arquivo guarda só o que vale para o projeto todo.
 
-**Última atualização:** 2026-11-18 · **Fase atual:** Fase 5 — Streaming (etapa 5.1 concluída; a iniciar a 5.2)
+**Última atualização:** 2026-11-18 · **Fase atual:** Fase 5 — Streaming (etapas 5.1 e 5.2 concluídas; a iniciar a 5.3)
 
 ## Fases
 
