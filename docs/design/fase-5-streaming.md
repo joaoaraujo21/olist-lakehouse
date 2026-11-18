@@ -6,7 +6,7 @@
 | **Fase** | 5 — Streaming |
 | **Responsável técnico** | João Guilherme Araujo |
 | **Data** | 2026-11-16 |
-| **Status** | Decisões S1 a S8 aprovadas em 2026-11-17 (ADRs 0009 a 0012); etapas 5.1 (simulador em modo `stream`) e 5.2 (leitura em streaming da bronze) concluídas em 2026-11-18 |
+| **Status** | Decisões S1 a S8 aprovadas em 2026-11-17 (ADRs 0009 a 0012); Fase concluída em 2026-11-18 (etapas 5.1 a 5.5); S5 revisada no [ADR 0013](../adr/0013-relogio-do-watermark-instante-de-chegada.md) |
 | **Documentos relacionados** | [Desenho da Fase 1 (simulador e bronze)](fase-1-simulador-bronze.md) · [Desenho da Fase 4 (gold)](fase-4-gold-metricas.md) · [ADR 0002](../adr/0002-pedido-valido-e-entrega-no-prazo.md) · [ADR 0007](../adr/0007-derivacao-de-status-e-definicoes-de-borda-da-gold.md) · [Dicionário de métricas](../dicionario_metricas.md) |
 
 ---

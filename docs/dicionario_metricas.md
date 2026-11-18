@@ -1,6 +1,7 @@
-# Dicionário de métricas oficiais — v1.1
+# Dicionário de métricas oficiais — v1.2
 
-- **Versão:** 1.1 (2026-11-15). A v1.1 só **acrescenta** as definições do scorecard, do SLA e de atraso × review (seção final); as definições dos 8 KPIs são as da v1.
+- **Versão:** 1.2 (2026-11-18). A v1.2 só **acrescenta** a seção "Visão ao vivo" (monitor de pedidos em risco, Fase 5) e atualiza o período dos dados; as definições dos 8 KPIs, do scorecard, do SLA e de atraso × review são as da v1.1.
+- **Versão anterior:** 1.1 (2026-11-15). A v1.1 só **acrescenta** as definições do scorecard, do SLA e de atraso × review (seção final); as definições dos 8 KPIs são as da v1.
 - **Conceitos base:** ver [ADR 0002](adr/0002-pedido-valido-e-entrega-no-prazo.md), [ADR 0007](adr/0007-derivacao-de-status-e-definicoes-de-borda-da-gold.md) e, para o scorecard, [ADR 0008](adr/0008-scorecard-de-vendedores-pedidos-compartilhados-e-cadastro-na-compra.md)
 - **Onde cada métrica é calculada:** Metric Views `olist.gold.mv_pedidos`, `olist.gold.mv_itens` e `olist.gold.mv_concentracao`, sobre as tabelas da camada gold. Dashboard, Genie e consultas SQL usam essas definições, e a validação (`quality.validacao_gold`) recalcula os números por outro caminho.
 
@@ -83,3 +84,41 @@ Regras de atraso:
 - **Atraso** = `DATE(entrega) − DATE(entrega estimada)` em dias, só para pedidos entregues. Positivo = atrasou; zero = no dia; negativo = adiantado.
 - **Faixas** de `gold_atraso_vs_review`: `1_adiantado` (−1 ou menos), `2_no_dia` (0), `3_atraso_1_a_3_dias`, `4_atraso_4_a_7_dias`, `5_atraso_8_a_14_dias`, `6_atraso_15_dias_ou_mais`. Só entram pedidos entregues **com** review.
 - Em `gold_delivery_sla`, `atraso_medio_dos_atrasados_dias` mede só quem atrasou; a média de todos misturaria atraso com antecipação.
+
+
+## Visão ao vivo (v1.2)
+
+Objetos da camada gold e do `ops` que sustentam o monitor de pedidos em risco (Fase 5, ADRs 0009 a 0014). São uma visão **operacional**: a fonte **oficial** dos KPIs continua sendo a gold batch (Metric Views `mv_*`, `fact_orders` e demais).
+
+| Objeto | Grão | Para que serve |
+|---|---|---|
+| `olist.gold.gold_orders_live` | um pedido (só pedidos com ao menos um evento) | estado atual do pedido, mantido por streaming: status, sequência, instante de cada etapa, data estimada e nível de risco |
+| `olist.gold.vw_pedidos_em_risco` | um pedido atrasado ou em risco | lista para a Logística agir antes da entrega, com os dias até a data estimada |
+| `olist.ops.streaming_batches` | um micro-lote | volume, pedidos que avançaram, ignorados, eventos tardios e latência de cada ciclo |
+
+**Qual número vale**
+- Para reunião, relatório e KPI: a gold batch. A visão ao vivo **não recalcula** GMV, cancelamento, entrega no prazo ou qualquer outro KPI oficial.
+- Para operar: a visão ao vivo. O status de um pedido ao vivo pode estar adiante do da gold batch até a próxima atualização dos pipelines; com a silver e a gold batch atualizadas com a mesma bronze, o status é **igual em todos os pedidos** (validado em 99.291 pedidos, etapa 5.4).
+- Pedido sem nenhum evento não existe ao vivo; na gold batch ele tem status `desconhecido`.
+
+**Regras**
+- **Status atual ao vivo:** o mesmo critério dos conceitos base (evento de maior `event_sequence`). Evento duplicado, atrasado ou fora de ordem não muda o status final; o instante de cada etapa (`created_at`, `approved_at`, `shipped_at`, `delivered_at`) é preenchido por qualquer evento, na ordem em que chegar.
+- **"Hoje":** a **data simulada corrente**, isto é, a data do maior `event_ts` já gravado em `gold_orders_live`. Nunca `current_date()`.
+- **Pedido aberto:** status `created`, `approved`, `invoiced`, `processing` ou `shipped`. Pedido fechado (`delivered`, `canceled`, `unavailable`) tem risco nulo.
+- **Nível de risco** (ADR 0011): `atrasado` se a data estimada de entrega já passou; `em_risco` se faltam de 0 a **2 dias** (N, em configuração) para a data estimada e o pedido ainda **não foi despachado** (`shipped`); `normal` nos demais pedidos abertos. Pedido despachado só vira `atrasado` depois de vencer (limitação desta versão).
+- **Evento tardio:** evento com `event_ts` mais antigo que o maior `event_ts` gravado menos 4 dias. É **aplicado** e **contado** em `streaming_batches.late_events`; nunca descartado em silêncio (ADR 0013).
+- **Frescor:** SLA de 15 minutos entre a gravação do arquivo na landing e a linha em `gold_orders_live` (ADR 0012); medido de 4 a 8,4 minutos por ciclo.
+
+**Cuidado ao ler a lista**
+- **"Atrasado" ao vivo não é "atraso" do SLA.** O atraso do SLA e do scorecard mede pedidos **entregues** (entrega depois da data estimada). "Atrasado" ao vivo é um pedido **ainda aberto** cuja data estimada passou; quando ele é entregue, o risco volta a nulo e o pedido entra na conta de entregues (no prazo ou não) da gold batch.
+- **A lista tem pedidos antigos.** Em 2028-08-27, 1.466 dos 1.822 pedidos `atrasado` estavam atrasados havia mais de 90 dias: são pedidos do histórico que nunca foram entregues nos dados de origem. Só 104 estavam atrasados havia até 7 dias. Para acionar a Logística, use `dias_para_a_entrega` (por exemplo, `>= -7`) junto com os `em_risco`.
+
+## O que mudou da v1.1 para a v1.2
+
+| Tema | v1.1 | v1.2 |
+|---|---|---|
+| Visão ao vivo | não existia | `gold_orders_live`, `vw_pedidos_em_risco` e `ops.streaming_batches`, com as regras acima; a gold batch continua sendo a fonte oficial |
+| "Atrasado" | só em pedidos entregues (`atraso_dias`) | também ao vivo, em pedidos abertos com a data estimada vencida (conceito diferente, descrito acima) |
+| "Hoje" | nenhuma métrica depende de "hoje" | só a visão ao vivo depende, e é a **data simulada**, não `current_date()` |
+| Período dos dados | 2026-09-06 a 2028-08-21 | 2026-09-06 a 2028-08-27, depois de emitir o stream (22 a 27/08) e atualizar a silver e a gold |
+| KPIs oficiais, com os novos dias | pedidos criados 98.476; válidos 97.265; GMV R$ 15.614.632,11; entregues 93.247; no prazo 93,27% | pedidos criados 99.291; válidos 98.079; GMV R$ 15.723.094,10; entregues 94.804; no prazo 93,27% |
