@@ -2,7 +2,7 @@
 
 - **Período:** 2026-11-13 a 2026-11-16
 - **Status:** ✅ concluída em 2026-11-16 — [desenho técnico](../design/fase-4-gold-metricas.md) (decisões G1 a G8) implementado
-- **Branch/PRs:** `fase-4/gold` (PR a abrir)
+- **Branch/PRs:** `fase-4/gold` (PR #11, *Squash and merge* em 2026-11-16)
 
 ## Objetivo
 
