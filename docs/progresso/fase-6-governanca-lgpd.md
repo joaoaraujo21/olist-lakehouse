@@ -1,7 +1,7 @@
 # Fase 6 — Governança e LGPD
 
 - **Período:** iniciada em 2026-11-18
-- **Status:** 🟡 em andamento — 6.1 (desenho) aprovada em 2026-11-18; 6.2 em execução (o João sobe e executa os notebooks)
+- **Status:** 🟡 em andamento — 6.1 (desenho) aprovada em 2026-11-18; 6.2 concluída em 2026-11-23 (grupos, grants e máscaras aplicados)
 - **Branch/PRs:** uma branch e um PR por etapa; 6.1 em `fase-6.1/desenho-governanca`
 
 ## Objetivo
@@ -30,7 +30,7 @@ Desenho completo em [docs/design/fase-6-governanca-lgpd.md](../design/fase-6-gov
 | Etapa | Entrega | Branch | Status |
 |---|---|---|---|
 | 6.1 | Desenho técnico e decisões G1 a G8 (perfis, máscaras, filtro de linha, exclusão, evidência) | `fase-6.1/desenho-governanca` | ✅ aprovada (ADRs 0016 a 0019) |
-| 6.2 | Grupos, `GRANT` por camada, classificação das lacunas e máscaras de coluna | `fase-6.2/perfis-e-mascaras` | a iniciar |
+| 6.2 | Grupos, `GRANT` por camada, classificação das lacunas e máscaras de coluna | `fase-6.2/perfis-e-mascaras` | ✅ concluída (aguarda commit e PR) |
 | 6.3 | Filtro de linha regional | `fase-6.3/filtros-de-linha` | a iniciar |
 | 6.4 | Exclusão de cliente ponta a ponta com evidência | `fase-6.4/exclusao-de-cliente` | a iniciar |
 | 6.5 | Auditoria e lineage, validação, documentação e encerramento | `fase-6.5/auditoria-e-encerramento` | a iniciar |
@@ -53,22 +53,36 @@ Levantamento somente de leitura do ambiente:
 
 Resultado: documento de desenho com 8 decisões, aprovadas em 2026-11-18 na opção recomendada (criar os grupos; matriz de máscaras; vendedor sem máscara; apagar o cadastro e manter o pedido anônimo) e registradas nos ADRs 0016 a 0019. Ajuste: quarto grupo, `olist_engenharia`, para isentar o dono do pipeline das máscaras.
 
-### 6.2 — Perfis, grants, classificação e máscaras (em execução)
+### 6.2 — Perfis, grants, classificação e máscaras (2026-11-23)
 
-Mudança de método: a partir desta fase os notebooks são entregues prontos e o João sobe, executa e testa. Dois notebooks em `src/governanca/`: `01_perfis_e_grants` (verifica os grupos, concede o acesso por camada e registra verificações em `quality.validacao_governanca`) e `02_classificacao_e_mascaras` (completa as tags de PII, cria as funções de máscara e as aplica na gold guiado pelas tags). Resultado a registrar após a execução.
+Mudança de método: a partir desta fase os notebooks são entregues prontos e o João sobe, executa e testa. Dois notebooks em `src/governanca/`: `01_perfis_e_grants` (verifica os grupos, concede o acesso por camada e registra verificações em `quality.validacao_governanca`) e `02_classificacao_e_mascaras` (completa as tags de PII, cria as funções de máscara e as aplica na gold guiado pelas tags).
+
+Resultado:
+
+- Quatro grupos de conta criados na interface (`olist_engenharia`, `olist_dpo`, `olist_gestor`, `olist_analista`); o João fica só em `olist_engenharia`.
+- Etapa `6.2-grants`: 9 verificações OK (o desenho previa 12 por erro de contagem). Etapa `6.2-mascaras`: 5 verificações OK.
+- Quatro máscaras ativas: `dim_customer` (id, cidade, CEP) e `fact_orders` (id), com as funções `ops.mask_identificador`, `mask_cidade` e `mask_cep`; o salt fica em `ops.governanca_config`.
+- A máscara em materialized view funciona; o plano B (views seguras) do ADR 0017 não foi necessário.
+- O dado gravado na gold continua em claro (32 caracteres no id), porque a atualização do pipeline roda como `olist_engenharia`.
+- Teste de perfil: o DPO foi validado na execução real; gestor e analista foram validados pela lógica das funções (corpo executado com cada perfil simulado), porque a participação nos grupos só pode ser alterada no console da conta.
+
+## Problemas e correções
+
+- A verificação "USE CATALOG para os 4 grupos" reprovou por erro do notebook: o `information_schema` grava `USE_CATALOG` com underscore. Corrigido (normalização do texto); os grants estavam certos.
+- Na demonstração de perfis o João viu tudo em claro, o que é esperado enquanto ele pertence a `olist_engenharia` (isenta) ou a mais de um grupo.
 
 ## Decisões
 
-Propostas G1 a G8 no desenho; viram ADRs 0016 a 0019 quando aprovadas.
+G1 a G8 aprovadas e registradas nos ADRs 0016 a 0019.
 
 ## Problemas encontrados
 
-Nenhum até agora.
+Ver correções na seção 6.2.
 
 ## Pendências
 
-- Aprovação das decisões G1 a G8.
-- Autorização para criar os grupos no workspace (6.2).
+- Teste real dos perfis gestor e analista, removendo o usuário de `olist_engenharia` e reiniciando a sessão (opcional).
+- Commit e PR da 6.2.
 
 ## Aprendizados
 
