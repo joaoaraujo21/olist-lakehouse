@@ -2,7 +2,7 @@
 
 Índice do diário de bordo. Cada fase tem seu próprio arquivo com o que foi feito, as decisões e as pendências; este arquivo guarda só o que vale para o projeto todo.
 
-**Última atualização:** 2026-11-18 · **Fase atual:** Fase 6 — Governança e LGPD (etapa 6.1: desenho escrito, aguardando aprovação; a Fase 5 foi concluída em 2026-11-18)
+**Última atualização:** 2026-11-23 · **Fase atual:** Fase 6 — Governança e LGPD (etapas 6.1 e 6.2 concluídas; próxima: 6.3, filtro de linha regional)
 
 ## Fases
 
