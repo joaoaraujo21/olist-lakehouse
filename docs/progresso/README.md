@@ -2,7 +2,7 @@
 
 Índice do diário de bordo. Cada fase tem seu próprio arquivo com o que foi feito, as decisões e as pendências; este arquivo guarda só o que vale para o projeto todo.
 
-**Última atualização:** 2026-11-18 · **Fase atual:** Fase 6 — Governança e LGPD (a iniciar; a Fase 5 foi concluída em 2026-11-18)
+**Última atualização:** 2026-11-18 · **Fase atual:** Fase 6 — Governança e LGPD (etapa 6.1: desenho escrito, aguardando aprovação; a Fase 5 foi concluída em 2026-11-18)
 
 ## Fases
 
@@ -14,7 +14,7 @@
 | 3 — CDC e SCD2 | ✅ concluída em 2026-11-13 | [fase-3-cdc-scd2.md](fase-3-cdc-scd2.md) |
 | 4 — Gold e Métricas | ✅ concluída em 2026-11-16 | [fase-4-gold-metricas.md](fase-4-gold-metricas.md) |
 | 5 — Streaming | ✅ concluída em 2026-11-18 | [fase-5-streaming.md](fase-5-streaming.md) |
-| 6 — Governança e LGPD | ⚪ a iniciar | [fase-6-governanca-lgpd.md](fase-6-governanca-lgpd.md) |
+| 6 — Governança e LGPD | 🟡 em andamento | [fase-6-governanca-lgpd.md](fase-6-governanca-lgpd.md) |
 | 7 — Testes, CI/CD e orquestração | — | |
 | 8 — Performance e revisão final | — | |
 | 9 — ML (opcional) | — | |
