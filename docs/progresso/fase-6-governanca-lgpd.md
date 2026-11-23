@@ -31,7 +31,7 @@ Desenho completo em [docs/design/fase-6-governanca-lgpd.md](../design/fase-6-gov
 |---|---|---|---|
 | 6.1 | Desenho técnico e decisões G1 a G8 (perfis, máscaras, filtro de linha, exclusão, evidência) | `fase-6.1/desenho-governanca` | ✅ aprovada (ADRs 0016 a 0019) |
 | 6.2 | Grupos, `GRANT` por camada, classificação das lacunas e máscaras de coluna | `fase-6.2/perfis-e-mascaras` | ✅ concluída (aguarda commit e PR) |
-| 6.3 | Filtro de linha regional | `fase-6.3/filtros-de-linha` | a iniciar |
+| 6.3 | Filtro de linha regional | `fase-6.3/filtros-de-linha` | ✅ concluída (aguarda commit e PR) |
 | 6.4 | Exclusão de cliente ponta a ponta com evidência | `fase-6.4/exclusao-de-cliente` | a iniciar |
 | 6.5 | Auditoria e lineage, validação, documentação e encerramento | `fase-6.5/auditoria-e-encerramento` | a iniciar |
 
@@ -70,6 +70,18 @@ Resultado:
 
 - A verificação "USE CATALOG para os 4 grupos" reprovou por erro do notebook: o `information_schema` grava `USE_CATALOG` com underscore. Corrigido (normalização do texto); os grants estavam certos.
 - Na demonstração de perfis o João viu tudo em claro, o que é esperado enquanto ele pertence a `olist_engenharia` (isenta) ou a mais de um grupo.
+
+### 6.3 — Filtro de linha regional (2026-11-23)
+
+Notebook `03_filtro_de_linha_regional` em `src/governanca/`: cria `ops.acesso_regional` (grupo → UFs; padrão Sudeste para o gestor), as funções `ops.filtro_regiao_uf` e `ops.filtro_regiao_cliente` e liga o filtro em `gold.dim_customer` e `gold.fact_orders`. `fact_orders` não tem UF; o filtro lê a UF do cliente em `silver.customers` (alternativa `copia_ops`, se o gestor não puder ler a silver pela função). A sintaxe do filtro foi testada em uma tabela de teste, já apagada. 
+Resultado:
+
+- Etapa `6.3-filtros`: 4 verificações OK (2 filtros ligados, 4 UFs do gestor em `ops.acesso_regional`, 2 funções criadas).
+- Atualização do pipeline `olist.gold` com os filtros e as máscaras ligados: concluída sem erro; os 2 filtros e as 4 máscaras continuaram no catálogo e a gold manteve 99.291 pedidos e 101.864 linhas em `dim_customer` (27 UFs), com o id em claro (a atualização rodou como engenharia).
+- `quality.validacao_gold` depois da atualização: 102 OK, 0 reprovadas (iguais à execução anterior).
+- Teste de perfil como engenharia: vê as 27 UFs; referências gravadas: 99.291 pedidos, 99.291 clientes e 67.635 pedidos no recorte do gestor (SP, RJ, MG, ES).
+- Lógica das funções executada com cada perfil simulado, sobre os dados reais: gestor 69.615 linhas em `dim_customer` e 67.635 em `fact_orders` (igual à referência); analista 101.864 e 99.291 (tudo); sem grupo 0; gestor com engenharia 101.864 e 99.291 (a engenharia isenta).
+- Não testado com usuário real em `olist_gestor`: o grupo só se altera no console da conta. Também não confirmado se o gestor consegue ler `silver.customers` pela função (plano: `fonte_uf = copia_ops`).
 
 ## Decisões
 
