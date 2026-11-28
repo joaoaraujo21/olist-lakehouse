@@ -1,7 +1,7 @@
 # Fase 6 — Governança e LGPD
 
 - **Período:** iniciada em 2026-11-18
-- **Status:** 🟡 em andamento — 6.1 (desenho) aprovada em 2026-11-18; 6.2 concluída em 2026-11-23 (grupos, grants e máscaras aplicados)
+- **Status:** 🟡 em andamento — 6.1 a 6.4 executadas (grupos, grants, máscaras, filtros de linha e exclusão de cliente); falta a 6.5
 - **Branch/PRs:** uma branch e um PR por etapa; 6.1 em `fase-6.1/desenho-governanca`
 
 ## Objetivo
@@ -30,9 +30,9 @@ Desenho completo em [docs/design/fase-6-governanca-lgpd.md](../design/fase-6-gov
 | Etapa | Entrega | Branch | Status |
 |---|---|---|---|
 | 6.1 | Desenho técnico e decisões G1 a G8 (perfis, máscaras, filtro de linha, exclusão, evidência) | `fase-6.1/desenho-governanca` | ✅ aprovada (ADRs 0016 a 0019) |
-| 6.2 | Grupos, `GRANT` por camada, classificação das lacunas e máscaras de coluna | `fase-6.2/perfis-e-mascaras` | ✅ concluída (aguarda commit e PR) |
-| 6.3 | Filtro de linha regional | `fase-6.3/filtros-de-linha` | ✅ concluída (aguarda commit e PR) |
-| 6.4 | Exclusão de cliente ponta a ponta com evidência | `fase-6.4/exclusao-de-cliente` | a iniciar |
+| 6.2 | Grupos, `GRANT` por camada, classificação das lacunas e máscaras de coluna | `fase-6.2/perfis-e-mascaras` | ✅ concluída e mergeada |
+| 6.3 | Filtro de linha regional | `fase-6.3/filtros-de-linha` | ✅ concluída (commit feito; PR) |
+| 6.4 | Exclusão de cliente ponta a ponta com evidência | `fase-6.4/exclusao-de-cliente` | ✅ concluída (aguarda commit e PR) |
 | 6.5 | Auditoria e lineage, validação, documentação e encerramento | `fase-6.5/auditoria-e-encerramento` | a iniciar |
 
 ## O que foi feito
@@ -83,6 +83,37 @@ Resultado:
 - Lógica das funções executada com cada perfil simulado, sobre os dados reais: gestor 69.615 linhas em `dim_customer` e 67.635 em `fact_orders` (igual à referência); analista 101.864 e 99.291 (tudo); sem grupo 0; gestor com engenharia 101.864 e 99.291 (a engenharia isenta).
 - Não testado com usuário real em `olist_gestor`: o grupo só se altera no console da conta. Também não confirmado se o gestor consegue ler `silver.customers` pela função (plano: `fonte_uf = copia_ops`).
 
+### 6.4 — Exclusão de cliente (2026-11-23)
+
+Achados ao detalhar o ADR 0019 (registrados no [ADR 0020](../adr/0020-propagacao-da-exclusao-por-reconstrucao-e-purga-fisica.md)):
+
+- A silver lê a bronze em streaming: um `DELETE` na bronze quebraria a próxima atualização. Decisão: apagar na bronze e reconstruir `customers`, `customers_historico` e `customers_quarentena` por full refresh seletivo.
+- O serverless não permite desligar a verificação do `VACUUM`; a retenção mínima baixa por propriedade da tabela (testado em tabela de teste).
+- O predicado do `DELETE` fica em `DESCRIBE HISTORY`: os ids do titular vão para uma tabela transitória e o `DELETE` usa subconsulta.
+- `fact_orders` perde o `customer_unique_id` do pedido; a janela `pedidos_validos_do_cliente` precisa particionar por `coalesce(customer_unique_id, customer_id)`.
+- A pessoa sai do cálculo de recompra (variação mínima, aprovada pelo João).
+- Fora do escopo: arquivos brutos da landing e o dataset original.
+
+Notebook `04_exclusao_de_cliente` (`simulacao` e `executar`, com retomada de solicitação interrompida).
+
+Resultado da exclusão do titular de teste (2 `customer_id`, 2 pedidos entregues):
+
+- Etapa `6.4-exclusao`: 14 verificações OK e 2 de registro. Titular com 0 linhas em `bronze.customers`, `silver.customers`, `silver.customers_historico`, `quality.customers_quarentena`, `gold.dim_customer` e `gold.fact_orders`.
+- Números oficiais iguais antes e depois: 99.291 pedidos, 98.079 válidos, GMV válido 15.723.094,10, 94.804 entregues e 88.427 no prazo. O pedido permanece (2 linhas em `fact_orders`, sem o identificador da pessoa).
+- Recompra: clientes com pedido válido de 94.870 para 94.869 e clientes com 2 ou mais pedidos de 2.882 para 2.881 (a pessoa tinha 2 pedidos válidos). A tabela de verificações mostra o mesmo valor antes e depois porque a foto "antes" foi tirada na retomada, já sem a pessoa; os valores de antes vêm da primeira execução.
+- Identificador ausente de `DESCRIBE HISTORY`; leitura de versões antigas bloqueada (arquivos apagados pelo `VACUUM`).
+- `ops.exclusoes_lgpd`: solicitação `concluida` (só hash do titular, contagens e versões); tentativas interrompidas ficam como `interrompida`; repetir a exclusão registra `sem_dados`. `ops.exclusoes_alvos` vazia.
+- Gold: a janela `pedidos_validos_do_cliente` passou a particionar por `coalesce(c.customer_unique_id, o.customer_id)` (`src/gold/01_gold_modelo`).
+
+## Problemas encontrados na 6.4
+
+- `DESCRIBE HISTORY` não funciona em materialized view (`dim_customer`, `fact_orders`): só a cópia física `__materialization_*` tem histórico. O notebook trata o erro.
+- O full refresh seletivo exige o nome qualificado da tabela, inclusive para a quarentena (`olist.quality.customers_quarentena`).
+- O Free Edition aceita um pipeline ativo por vez: uma tentativa automática de atualização da silver (após falha) impediu a atualização da gold; foi preciso parar o pipeline.
+- Tabelas gerenciadas pelo pipeline (streaming tables) não aceitam `ALTER ... SET TBLPROPERTIES`: os arquivos delas ficam nas cópias `__materialization_*`, e é nelas que a purga atua.
+- Gravar um texto com quebra de linha dentro de um literal SQL corrompia o JSON da solicitação; passou a limpar as mensagens.
+- O teste de ponta a ponta de uma exclusão que passa de primeira (sem retomada) não foi repetido com outro titular.
+
 ## Decisões
 
 G1 a G8 aprovadas e registradas nos ADRs 0016 a 0019.
@@ -94,7 +125,8 @@ Ver correções na seção 6.2.
 ## Pendências
 
 - Teste real dos perfis gestor e analista, removendo o usuário de `olist_engenharia` e reiniciando a sessão (opcional).
-- Commit e PR da 6.2.
+- Commit e PR da 6.4 (e conferir o merge da 6.3).
+- Cobertura do dicionário v1.3: nota da recompra após exclusão e do recorte regional do gestor (etapa 6.5).
 
 ## Aprendizados
 
