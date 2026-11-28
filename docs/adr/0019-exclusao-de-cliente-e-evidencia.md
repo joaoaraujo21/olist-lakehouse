@@ -3,6 +3,7 @@
 - **Status:** aceito (implementação na etapa 6.4)
 - **Data:** 2026-11-18
 - **Fase:** 6 — Governança e LGPD
+- **Ajustado por:** [ADR 0020](0020-propagacao-da-exclusao-por-reconstrucao-e-purga-fisica.md) (propagação por reconstrução e purga física)
 
 ## Contexto
 
